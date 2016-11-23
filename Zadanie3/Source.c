@@ -398,11 +398,11 @@ void vypisCestu(const Path pathBack, const char * cesta)
 {
 	if (pathBack.cesta != NULL)
 	{
-		int i;
 		printf("%s v case %d po %d polickach\n", cesta, pathBack.time, pathBack.steps);
+		/*int i;
 		for (i = 0; i < pathBack.steps; ++i)
 			printf("[%d;%d] ", pathBack.cesta[i * 2], pathBack.cesta[i * 2 + 1]);
-		putchar('\n');
+		putchar('\n');*/
 	}
 }
 
@@ -732,7 +732,7 @@ void main()
 	strncpy(mapa[2], "H.....N........P....", m);
 	strncpy(mapa[3], "....................", m);
 	strncpy(mapa[4], "..H............P....", m);
-	strncpy(mapa[5], "....0...............", m);
+	strncpy(mapa[5], "..G.0...............", m);
 	strncpy(mapa[6], "...............P....", m);
 	strncpy(mapa[7], "....................", m);
 	strncpy(mapa[8], "...............1....", m);
