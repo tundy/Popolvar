@@ -434,10 +434,16 @@ void updateList(PathList* list, int n_args, ...)
 		partList = temp;;
 
 		time += part->time;
+
+		if(time >= list->time)
+		{
+			va_end(ap);
+			return;
+		}
 	}
 	va_end(ap);
 
-	if (list->parts == NULL || time < list->time)
+	//if (list->parts == NULL || time < list->time)
 	{
 		list->time = time;
 		list->parts = partList;
