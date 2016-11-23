@@ -348,13 +348,14 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 	UDLR(n, m, queue, start, start->point);
 	dijkstra(mapa, n, m, teleporty, queue, dist, distGen, t);
 
+	// ReSharper disable CppLocalVariableMightNotBeInitialized
 	if (dist[Drak.y][Drak.x].steps > 0 && dist[Drak.y][Drak.x].steps <= t)
 	{
 		printf("Start->Drak bez generatora v case %d po %d polickach\n", dist[Drak.y][Drak.x].time, dist[Drak.y][Drak.x].steps);
 
 	}
 
-	if (distGen[Drak.y][Drak.x].steps > 0 && distGen[Drak.y][Drak.x].steps <= t)
+	if (distGen[Drak.y][Drak.x].steps > 0)
 	{
 		if(dist[Generator.y][Generator.x].steps)
 		{
@@ -364,11 +365,12 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 				printf("Start->Drak s generatorom v case %d po %d polickach\n", dist[Generator.y][Generator.x].time + distGen[Drak.y][Drak.x].time, realSteps);
 			}
 		}
-		else
+		else if(distGen[Drak.y][Drak.x].steps <= t)
 		{
 			printf("Start->Drak s generatorom v case %d po %d polickach\n", distGen[Drak.y][Drak.x].time, distGen[Drak.y][Drak.x].steps);
 		}
 	}
+	// ReSharper restore CppLocalVariableMightNotBeInitialized
 
 	int* result = NULL;
 	*dlzka_cesty = 0;
