@@ -448,6 +448,7 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 #endif
 	int x, y;
 	Point Drak, Princezna1, Princezna2, Princezna3, Generator;
+	Generator.x = -1;
 	Teleport** teleporty = calloc(10, sizeof(Teleport*));
 
 	int temp = 1;
@@ -531,63 +532,61 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 
 	vytvorStartDrak(t, Drak, Generator, dist, distGen, &startDrak, &startGeneratorDrak);
 
-#ifdef _MSC_VER
-#pragma region PrincezneGeneratorOn
-#endif
-	if (distGen[Princezna1.y][Princezna1.x].time < distGen[Princezna2.y][Princezna2.x].time)
-		if (distGen[Princezna1.y][Princezna1.x].time < distGen[Princezna3.y][Princezna3.x].time)
-			vytvorCestu(Princezna1, distGen, &GeneratorPrincenza1);
+	// PrincezneGeneratorOn
+	if (Generator.x != -1)
+	{
+		if (distGen[Princezna1.y][Princezna1.x].time < distGen[Princezna2.y][Princezna2.x].time)
+			if (distGen[Princezna1.y][Princezna1.x].time < distGen[Princezna3.y][Princezna3.x].time)
+				vytvorCestu(Princezna1, distGen, &GeneratorPrincenza1);
+			else
+				vytvorCestu(Princezna3, distGen, &GeneratorPrincenza3);
+		else if (distGen[Princezna2.y][Princezna2.x].time < distGen[Princezna3.y][Princezna3.x].time)
+			vytvorCestu(Princezna2, distGen, &GeneratorPrincenza2);
 		else
 			vytvorCestu(Princezna3, distGen, &GeneratorPrincenza3);
-	else if (distGen[Princezna2.y][Princezna2.x].time < distGen[Princezna3.y][Princezna3.x].time)
-		vytvorCestu(Princezna2, distGen, &GeneratorPrincenza2);
-	else
-		vytvorCestu(Princezna3, distGen, &GeneratorPrincenza3);
 
-	clearOne(distGen, n, m);
-	start = newStart(NULL, distGen, Princezna1.x, Princezna1.y, ON);
-	UDLR(n, m, queue, start, start->point);
-	dijkstra(mapa, n, m, teleporty, queue, NULL, distGen, INT_MAX);
-	if (distGen[Princezna2.y][Princezna2.x].time == distGen[Princezna3.y][Princezna3.x].time)
-	{
-		vytvorCestu(Princezna3, distGen, &P1P3GZ);
-		vytvorCestu(Princezna2, distGen, &P1P2GZ);
-	}
-	else if (distGen[Princezna2.y][Princezna2.x].time < distGen[Princezna3.y][Princezna3.x].time)
-		vytvorCestu(Princezna2, distGen, &P1P2GZ);
-	else
-		vytvorCestu(Princezna3, distGen, &P1P3GZ);
+		clearOne(distGen, n, m);
+		start = newStart(NULL, distGen, Princezna1.x, Princezna1.y, ON);
+		UDLR(n, m, queue, start, start->point);
+		dijkstra(mapa, n, m, teleporty, queue, NULL, distGen, INT_MAX);
+		if (distGen[Princezna2.y][Princezna2.x].time == distGen[Princezna3.y][Princezna3.x].time)
+		{
+			vytvorCestu(Princezna3, distGen, &P1P3GZ);
+			vytvorCestu(Princezna2, distGen, &P1P2GZ);
+		}
+		else if (distGen[Princezna2.y][Princezna2.x].time < distGen[Princezna3.y][Princezna3.x].time)
+			vytvorCestu(Princezna2, distGen, &P1P2GZ);
+		else
+			vytvorCestu(Princezna3, distGen, &P1P3GZ);
 
-	clearOne(distGen, n, m);
-	start = newStart(NULL, distGen, Princezna2.x, Princezna2.y, ON);
-	UDLR(n, m, queue, start, start->point);
-	dijkstra(mapa, n, m, teleporty, queue, NULL, distGen, INT_MAX);
-	if (distGen[Princezna1.y][Princezna1.x].time == distGen[Princezna3.y][Princezna3.x].time)
-	{
-		vytvorCestu(Princezna1, distGen, &P2P1GZ);
-		vytvorCestu(Princezna3, distGen, &P2P3GZ);
-	}
-	else if (distGen[Princezna1.y][Princezna1.x].time < distGen[Princezna3.y][Princezna3.x].time)
-		vytvorCestu(Princezna1, distGen, &P2P1GZ);
-	else
-		vytvorCestu(Princezna3, distGen, &P2P3GZ);
+		clearOne(distGen, n, m);
+		start = newStart(NULL, distGen, Princezna2.x, Princezna2.y, ON);
+		UDLR(n, m, queue, start, start->point);
+		dijkstra(mapa, n, m, teleporty, queue, NULL, distGen, INT_MAX);
+		if (distGen[Princezna1.y][Princezna1.x].time == distGen[Princezna3.y][Princezna3.x].time)
+		{
+			vytvorCestu(Princezna1, distGen, &P2P1GZ);
+			vytvorCestu(Princezna3, distGen, &P2P3GZ);
+		}
+		else if (distGen[Princezna1.y][Princezna1.x].time < distGen[Princezna3.y][Princezna3.x].time)
+			vytvorCestu(Princezna1, distGen, &P2P1GZ);
+		else
+			vytvorCestu(Princezna3, distGen, &P2P3GZ);
 
-	clearOne(distGen, n, m);
-	start = newStart(NULL, distGen, Princezna3.x, Princezna3.y, ON);
-	UDLR(n, m, queue, start, start->point);
-	dijkstra(mapa, n, m, teleporty, queue, NULL, distGen, INT_MAX);
-	if (distGen[Princezna1.y][Princezna1.x].time == distGen[Princezna2.y][Princezna2.x].time)
-	{
-		vytvorCestu(Princezna1, distGen, &P3P1GZ);
-		vytvorCestu(Princezna2, distGen, &P3P2GZ);
+		clearOne(distGen, n, m);
+		start = newStart(NULL, distGen, Princezna3.x, Princezna3.y, ON);
+		UDLR(n, m, queue, start, start->point);
+		dijkstra(mapa, n, m, teleporty, queue, NULL, distGen, INT_MAX);
+		if (distGen[Princezna1.y][Princezna1.x].time == distGen[Princezna2.y][Princezna2.x].time)
+		{
+			vytvorCestu(Princezna1, distGen, &P3P1GZ);
+			vytvorCestu(Princezna2, distGen, &P3P2GZ);
+		}
+		else if (distGen[Princezna1.y][Princezna1.x].time < distGen[Princezna2.y][Princezna2.x].time)
+			vytvorCestu(Princezna1, distGen, &P3P1GZ);
+		else
+			vytvorCestu(Princezna2, distGen, &P3P2GZ);
 	}
-	else if (distGen[Princezna1.y][Princezna1.x].time < distGen[Princezna2.y][Princezna2.x].time)
-		vytvorCestu(Princezna1, distGen, &P3P1GZ);
-	else
-		vytvorCestu(Princezna2, distGen, &P3P2GZ);
-#ifdef _MSC_VER
-#pragma endregion
-#endif
 
 	// Cesta k drakovi bez generatora
 	if (startDrak.cesta)
@@ -597,7 +596,8 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 		UDLR(n, m, queue, start, start->point);
 		dijkstra(mapa, n, m, teleporty, queue, dist, distGen, INT_MAX);
 
-		vytvorCestu(Generator, dist, &DrakGenerator);
+		if(Generator.x != -1)
+			vytvorCestu(Generator, dist, &DrakGenerator);
 
 		// Drak->Princezne bez generatora
 		vytvorCestu(Princezna1, dist, &DrakPrincenza1GV);
@@ -615,12 +615,32 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 		else
 			vytvorCestu(Princezna3, distGen, &DrakPrincenza3GZ);
 
-		/*clear(dist, distGen, n, m);
+		clear(dist, distGen, n, m);
 		start = newStart(dist, distGen, Princezna1.x, Princezna1.y, OFF);
 		UDLR(n, m, queue, start, start->point);
 		dijkstra(mapa, n, m, teleporty, queue, dist, distGen, INT_MAX);
-		vytvorCestu(Princezna1, dist, &DrakPrincenza1GV);
-		vytvorCestu(Princezna1, dist, &DrakPrincenza1GV);*/
+		vytvorCestu(Princezna2, dist, &P1P2GN);
+		vytvorCestu(Princezna2, distGen, &P1GP2);
+		vytvorCestu(Princezna3, dist, &P1P3GN);
+		vytvorCestu(Princezna3, distGen, &P1GP3);
+
+		clear(dist, distGen, n, m);
+		start = newStart(dist, distGen, Princezna2.x, Princezna2.y, OFF);
+		UDLR(n, m, queue, start, start->point);
+		dijkstra(mapa, n, m, teleporty, queue, dist, distGen, INT_MAX);
+		vytvorCestu(Princezna1, dist, &P2P1GN);
+		vytvorCestu(Princezna1, distGen, &P2GP1);
+		vytvorCestu(Princezna3, dist, &P2P3GN);
+		vytvorCestu(Princezna3, distGen, &P2GP3);
+
+		clear(dist, distGen, n, m);
+		start = newStart(dist, distGen, Princezna3.x, Princezna3.y, OFF);
+		UDLR(n, m, queue, start, start->point);
+		dijkstra(mapa, n, m, teleporty, queue, dist, distGen, INT_MAX);
+		vytvorCestu(Princezna1, dist, &P3P1GN);
+		vytvorCestu(Princezna1, distGen, &P3GP1);
+		vytvorCestu(Princezna2, dist, &P3P2GN);
+		vytvorCestu(Princezna2, distGen, &P3GP2);
 	}
 
 	// Cesta k drakovi s generatorom
@@ -663,6 +683,20 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 	vypisCestu(P2P3GZ, TOSTRING(P2P3GZ));
 	vypisCestu(P3P1GZ, TOSTRING(P3P1GZ));
 	vypisCestu(P3P2GZ, TOSTRING(P3P2GZ));
+
+	vypisCestu(P1P2GN, TOSTRING(P1P2GN));
+	vypisCestu(P1P3GN, TOSTRING(P1P3GN));
+	vypisCestu(P2P1GN, TOSTRING(P2P1GN));
+	vypisCestu(P2P3GN, TOSTRING(P2P3GN));
+	vypisCestu(P3P1GN, TOSTRING(P3P1GN));
+	vypisCestu(P3P2GN, TOSTRING(P3P2GN));
+
+	vypisCestu(P1GP2, TOSTRING(P1GP2));
+	vypisCestu(P1GP3, TOSTRING(P1GP3));
+	vypisCestu(P2GP1, TOSTRING(P2GP1));
+	vypisCestu(P2GP3, TOSTRING(P2GP3));
+	vypisCestu(P3GP1, TOSTRING(P3GP1));
+	vypisCestu(P3GP2, TOSTRING(P3GP2));
 #ifdef _MSC_VER
 #pragma endregion
 #endif
@@ -693,12 +727,12 @@ void main()
 	for (i = 0; i < n; i++)
 		mapa[i] = malloc(m * sizeof(char));
 
-	strncpy(mapa[0], "..D.................", m);
-	strncpy(mapa[1], ".....1N...0.........", m);
+	strncpy(mapa[0], "....................", m);
+	strncpy(mapa[1], ".....1N.D.0.........", m);
 	strncpy(mapa[2], "H.....N........P....", m);
 	strncpy(mapa[3], "....................", m);
 	strncpy(mapa[4], "..H............P....", m);
-	strncpy(mapa[5], "..G.0...............", m);
+	strncpy(mapa[5], "....0...............", m);
 	strncpy(mapa[6], "...............P....", m);
 	strncpy(mapa[7], "....................", m);
 	strncpy(mapa[8], "...............1....", m);
