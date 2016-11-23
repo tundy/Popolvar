@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdarg.h>
 
 #define TOSTRING(x) #x
 
@@ -128,7 +129,7 @@ typedef struct pathBack
 
 typedef struct pathPart
 {
-	Path part;
+	Path* part;
 	struct pathPart* next;
 } PathPart;
 
@@ -409,6 +410,40 @@ void vypisCestu(const Path pathBack, const char* cesta)
 //	}
 //}
 
+void updateList(PathList* list, int n_args, ...)
+{
+	int i, time = 0;
+	va_list ap;
+	Path* part;
+	PathPart *partList = NULL, *temp;
+
+	va_start(ap, n_args);
+	for (i = 1; i <= n_args; i++)
+	{
+		part = va_arg(ap, Path*);
+
+		if (part->cesta == NULL)
+		{
+			va_end(ap);
+			return;
+		}
+
+		temp = malloc(sizeof(PathPart));
+		temp->next = partList;
+		temp->part = part;
+		partList = temp;;
+
+		time += part->time;
+	}
+	va_end(ap);
+
+	if (list->parts == NULL || time < list->time)
+	{
+		list->time = time;
+		list->parts = partList;
+	}
+}
+
 int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 {
 #ifdef _MSC_VER
@@ -476,22 +511,20 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 	}
 
 	Path startDrak, startGeneratorDrak, DrakGenerator;
-	//Path DrakPrincenza1GZ, DrakPrincenza2GZ, DrakPrincenza3GZ;
 	Path DrakPrincenza1GV, DrakPrincenza2GV, DrakPrincenza3GV;
+	Path DrakPrincenza1GZ, DrakPrincenza2GZ, DrakPrincenza3GZ;
 	Path GeneratorPrincenza1, GeneratorPrincenza2, GeneratorPrincenza3;
 	Path P1P2GZ, P1P3GZ, P2P1GZ, P2P3GZ, P3P1GZ, P3P2GZ;
 	Path P1P2GN, P1P3GN, P2P1GN, P2P3GN, P3P1GN, P3P2GN;
-	//Path P1GP2, P1GP3, P2GP1, P2GP3, P3GP1, P3GP2;
 	Path P1G, P2G, P3G;
 
-	//DrakPrincenza1GZ.cesta = DrakPrincenza2GZ.cesta = DrakPrincenza3GZ.cesta =
 	P1G.cesta = P2G.cesta = P3G.cesta =
-	DrakPrincenza1GV.cesta = DrakPrincenza2GV.cesta = DrakPrincenza3GV.cesta =
-	GeneratorPrincenza1.cesta = GeneratorPrincenza2.cesta = GeneratorPrincenza3.cesta =
-	P1P2GZ.cesta = P1P3GZ.cesta = P2P1GZ.cesta = P2P3GZ.cesta = P3P1GZ.cesta = P3P2GZ.cesta =
-	P1P2GN.cesta = P1P3GN.cesta = P2P1GN.cesta = P2P3GN.cesta = P3P1GN.cesta = P3P2GN.cesta =
-	//P1GP2.cesta = P1GP3.cesta = P2GP1.cesta = P2GP3.cesta = P3GP1.cesta = P3GP2.cesta =
-	DrakGenerator.cesta = startGeneratorDrak.cesta = startDrak.cesta = NULL;
+		DrakPrincenza1GV.cesta = DrakPrincenza2GV.cesta = DrakPrincenza3GV.cesta =
+		DrakPrincenza1GZ.cesta = DrakPrincenza2GZ.cesta = DrakPrincenza3GZ.cesta =
+		GeneratorPrincenza1.cesta = GeneratorPrincenza2.cesta = GeneratorPrincenza3.cesta =
+		P1P2GZ.cesta = P1P3GZ.cesta = P2P1GZ.cesta = P2P3GZ.cesta = P3P1GZ.cesta = P3P2GZ.cesta =
+		P1P2GN.cesta = P1P3GN.cesta = P2P1GN.cesta = P2P3GN.cesta = P3P1GN.cesta = P3P2GN.cesta =
+		DrakGenerator.cesta = startGeneratorDrak.cesta = startDrak.cesta = NULL;
 #ifdef _MSC_VER
 #pragma endregion
 #endif
@@ -588,6 +621,14 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 		vytvorCestu(Princezna3, dist, &DrakPrincenza3GV);
 
 		// Drak->Prencezne s generatorom
+		clear(dist, n, m);
+		start = newStart(dist, Drak.x, Drak.y, ON);
+		UDLR(n, m, queue, start, start->point);
+		dijkstra(mapa, n, m, teleporty, queue, dist, INT_MAX);
+		vytvorCestu(Princezna1, dist, &DrakPrincenza1GZ);
+		vytvorCestu(Princezna2, dist, &DrakPrincenza2GZ);
+		vytvorCestu(Princezna3, dist, &DrakPrincenza3GZ);
+
 		/*if (distGen[Princezna1.y][Princezna1.x].time < distGen[Princezna2.y][Princezna2.x].time)
 			if (distGen[Princezna1.y][Princezna1.x].time < distGen[Princezna3.y][Princezna3.x].time)
 				vytvorCestu(Princezna1, distGen, &DrakPrincenza1GZ);
@@ -642,9 +683,67 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 	list.time = INT_MAX;
 	list.parts = NULL;
 
-	if(startDrak.cesta && DrakGenerator.cesta)
+	// Start->Generator->Drak->Princezna->Princezna->Princezna
+	if (startGeneratorDrak.cesta)
 	{
-		
+		updateList(&list, 4, &startGeneratorDrak, &DrakPrincenza1GZ, &P1P2GZ, &P2P3GZ);
+		updateList(&list, 4, &startGeneratorDrak, &DrakPrincenza1GZ, &P1P3GZ, &P3P2GZ);
+
+		updateList(&list, 4, &startGeneratorDrak, &DrakPrincenza2GZ, &P2P1GZ, &P1P3GZ);
+		updateList(&list, 4, &startGeneratorDrak, &DrakPrincenza2GZ, &P2P3GZ, &P3P1GZ);
+
+		updateList(&list, 4, &startGeneratorDrak, &DrakPrincenza3GZ, &P3P1GZ, &P1P2GZ);
+		updateList(&list, 4, &startGeneratorDrak, &DrakPrincenza3GZ, &P3P2GZ, &P2P1GZ);
+	}
+
+	// Start->Drak->...
+	if (startDrak.cesta)
+	{
+		// Start->Drak->Generator->Princezna->Princezna->Princezna
+		if (DrakGenerator.cesta)
+		{
+			updateList(&list, 5, &startDrak, &DrakGenerator, &GeneratorPrincenza1, &P1P2GZ, &P2P3GZ);
+			updateList(&list, 5, &startDrak, &DrakGenerator, &GeneratorPrincenza1, &P1P3GZ, &P3P1GZ);
+
+			updateList(&list, 5, &startDrak, &DrakGenerator, &GeneratorPrincenza2, &P2P1GZ, &P1P3GZ);
+			updateList(&list, 5, &startDrak, &DrakGenerator, &GeneratorPrincenza2, &P2P3GZ, &P3P1GZ);
+
+			updateList(&list, 5, &startDrak, &DrakGenerator, &GeneratorPrincenza3, &P3P1GZ, &P1P2GZ);
+			updateList(&list, 5, &startDrak, &DrakGenerator, &GeneratorPrincenza3, &P3P2GZ, &P2P1GZ);
+		}
+
+		// Start->Drak->Princezna->Princezna->Princezna
+		updateList(&list, 4, &startDrak, &DrakPrincenza1GV, &P1P2GN, &P2P3GN);
+		updateList(&list, 4, &startDrak, &DrakPrincenza1GV, &P1P3GN, &P3P2GN);
+
+		updateList(&list, 4, &startDrak, &DrakPrincenza2GV, &P2P1GN, &P1P3GN);
+		updateList(&list, 4, &startDrak, &DrakPrincenza2GV, &P2P3GN, &P3P1GN);
+
+		updateList(&list, 4, &startDrak, &DrakPrincenza3GV, &P3P1GN, &P1P2GN);
+		updateList(&list, 4, &startDrak, &DrakPrincenza3GV, &P3P2GN, &P2P1GN);
+
+		if (Generator.x != -1)
+		{
+			// Start->Drak->Princezna->Generator->Princezna->Princezna
+			updateList(&list, 5, &startDrak, &DrakPrincenza1GV, &P1G, &GeneratorPrincenza2, &P2P3GZ);
+			updateList(&list, 5, &startDrak, &DrakPrincenza1GV, &P1G, &GeneratorPrincenza3, &P3P2GZ);
+
+			updateList(&list, 5, &startDrak, &DrakPrincenza2GV, &P2G, &GeneratorPrincenza1, &P1P3GZ);
+			updateList(&list, 5, &startDrak, &DrakPrincenza2GV, &P2G, &GeneratorPrincenza3, &P3P2GZ);
+
+			updateList(&list, 5, &startDrak, &DrakPrincenza3GV, &P3G, &GeneratorPrincenza1, &P1P2GZ);
+			updateList(&list, 5, &startDrak, &DrakPrincenza3GV, &P3G, &GeneratorPrincenza2, &P2P1GZ);
+
+			// Start->Drak->Princezna->Princezna->Generator->Princezna
+			updateList(&list, 5, &startDrak, &DrakPrincenza1GV, &P1P2GN, &P2G, &GeneratorPrincenza3);
+			updateList(&list, 5, &startDrak, &DrakPrincenza1GV, &P1P3GN, &P3G, &GeneratorPrincenza2);
+
+			updateList(&list, 5, &startDrak, &DrakPrincenza2GV, &P2P1GN, &P1G, &GeneratorPrincenza3);
+			updateList(&list, 5, &startDrak, &DrakPrincenza2GV, &P2P3GN, &P3G, &GeneratorPrincenza1);
+
+			updateList(&list, 5, &startDrak, &DrakPrincenza3GV, &P3P1GN, &P1G, &GeneratorPrincenza2);
+			updateList(&list, 5, &startDrak, &DrakPrincenza3GV, &P3P2GN, &P2G, &GeneratorPrincenza1);
+		}
 	}
 
 #ifdef _MSC_VER
@@ -654,13 +753,13 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 	vypisCestu(DrakGenerator, TOSTRING(DrakGenerator));
 	vypisCestu(startGeneratorDrak, TOSTRING(startGeneratorDrak));
 
-	/*vypisCestu(DrakPrincenza1GZ, TOSTRING(DrakPrincenza1GZ));
-	vypisCestu(DrakPrincenza2GZ, TOSTRING(DrakPrincenza2GZ));
-	vypisCestu(DrakPrincenza3GZ, TOSTRING(DrakPrincenza3GZ));*/
-
 	vypisCestu(DrakPrincenza1GV, TOSTRING(DrakPrincenza1GV));
 	vypisCestu(DrakPrincenza2GV, TOSTRING(DrakPrincenza2GV));
 	vypisCestu(DrakPrincenza3GV, TOSTRING(DrakPrincenza3GV));
+
+	vypisCestu(DrakPrincenza1GZ, TOSTRING(DrakPrincenza1GZ));
+	vypisCestu(DrakPrincenza2GZ, TOSTRING(DrakPrincenza2GZ));
+	vypisCestu(DrakPrincenza3GZ, TOSTRING(DrakPrincenza3GZ));
 
 	vypisCestu(GeneratorPrincenza1, TOSTRING(GeneratorPrincenza1));
 	vypisCestu(GeneratorPrincenza2, TOSTRING(GeneratorPrincenza2));
@@ -683,13 +782,6 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 	vypisCestu(P1G, TOSTRING(P1G));
 	vypisCestu(P2G, TOSTRING(P2G));
 	vypisCestu(P3G, TOSTRING(P3G));
-
-	/*vypisCestu(P1GP2, TOSTRING(P1GP2));
-	vypisCestu(P1GP3, TOSTRING(P1GP3));
-	vypisCestu(P2GP1, TOSTRING(P2GP1));
-	vypisCestu(P2GP3, TOSTRING(P2GP3));
-	vypisCestu(P3GP1, TOSTRING(P3GP1));
-	vypisCestu(P3GP2, TOSTRING(P3GP2));*/
 #ifdef _MSC_VER
 #pragma endregion
 #endif
