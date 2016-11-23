@@ -117,24 +117,18 @@ typedef struct point
 	int y;
 } Point;
 
-typedef struct pathvalue
-{
-	Point point;
-	struct pathvalue* back;
-} PathValue;
-
 typedef struct pathBack
 {
 	int steps;
 	int time;
-	PathValue* start;
+	int* cesta;
 } Path;
 
 typedef struct qv
 {
 	int slowed;
 	Point point;
-	Point back;
+	Point* back;
 	int generator;
 } QV;
 
@@ -148,7 +142,7 @@ typedef struct title
 {
 	int steps;
 	int time;
-	Point back;
+	Point* back;
 } Title;
 
 void clear(Title** dist, Title** distGen, int n, int m)
@@ -160,8 +154,8 @@ void clear(Title** dist, Title** distGen, int n, int m)
 		{
 			dist[y][x].time = INT_MAX;
 			distGen[y][x].time = INT_MAX;
-			dist[y][x].steps = 0;
-			distGen[y][x].steps = 0;
+			dist[y][x].steps = -1;
+			distGen[y][x].steps = -1;
 		}
 	}
 }
@@ -169,8 +163,7 @@ void clear(Title** dist, Title** distGen, int n, int m)
 QV* newQV(QV* value, int y, int x)
 {
 	QV* new_qv = malloc(sizeof(QV));
-	new_qv->back.y = value->point.y;
-	new_qv->back.x = value->point.x;
+	new_qv->back = &value->point;
 	new_qv->point.y = y;
 	new_qv->point.x = x;
 	new_qv->generator = value->generator;
@@ -193,7 +186,8 @@ void UDLR(int n, int m, Queue* queue, QV* value, Point point)
 void updateDist(Title** dist, QV* value, int time)
 {
 	dist[value->point.y][value->point.x].time = time;
-	dist[value->point.y][value->point.x].steps = dist[value->back.y][value->back.x].steps + 1;
+	dist[value->point.y][value->point.x].steps = dist[value->back->y][value->back->x].steps + 1;
+	dist[value->point.y][value->point.x].back = value->back;
 }
 
 QV* newStart(Title** dist, Title** distGen, int x, int y, int gen)
@@ -201,14 +195,19 @@ QV* newStart(Title** dist, Title** distGen, int x, int y, int gen)
 	QV* value = malloc(sizeof(QV));
 	value->point.x = x;
 	value->point.y = y;
-	value->back.x = x;
-	value->back.y = y;
+	value->back = &value->point;
 	value->generator = gen;
 	value->slowed = 0;
 	if (gen)
+	{
 		distGen[x][y].time = 0;
+		distGen[x][y].steps = 0;
+	}
 	else
+	{
 		dist[x][y].time = 0;
+		dist[x][y].steps = 0;
+	}
 	return value;
 }
 
@@ -249,8 +248,8 @@ void dijkstra(char** mapa, int n, int m, Teleport** teleporty, Queue* queue, Tit
 
 		if (value->generator)
 		{
-			time += distGen[value->back.y][value->back.x].time;
-			if(time < 0 || time > maxTime)
+			time += distGen[value->back->y][value->back->x].time;
+			if (time < 0 || time > maxTime)
 				continue;
 			if (time < distGen[value->point.y][value->point.x].time)
 			{
@@ -260,17 +259,17 @@ void dijkstra(char** mapa, int n, int m, Teleport** teleporty, Queue* queue, Tit
 		}
 		else
 		{
-			time += dist[value->back.y][value->back.x].time;
+			time += dist[value->back->y][value->back->x].time;
 			if (time < 0 || time > maxTime)
 				continue;
 			if (time < dist[value->point.y][value->point.x].time)
 			{
 				updateDist(dist, value, time);
 				addToQueue(mapa, n, m, teleporty, queue, value);
-				if (mapa[value->back.y][value->back.x] == gene)
+				if (mapa[value->point.y][value->point.x] == gene)
 				{
 					value->generator = ON;
-					updateDist(distGen, value, 1);
+					updateDist(distGen, value, 0);
 					addToQueue(mapa, n, m, teleporty, queue, value);
 				}
 			}
@@ -344,33 +343,103 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 	}
 
 	clear(dist, distGen, n, m);
-	QV * start = newStart(dist, distGen, startX, startY, mapa[startY][startX] == gene);
+	QV* start = newStart(dist, distGen, startX, startY, mapa[startY][startX] == gene);
 	UDLR(n, m, queue, start, start->point);
 	dijkstra(mapa, n, m, teleporty, queue, dist, distGen, t);
 
-	// ReSharper disable CppLocalVariableMightNotBeInitialized
-	if (dist[Drak.y][Drak.x].steps > 0 && dist[Drak.y][Drak.x].steps <= t)
-	{
-		printf("Start->Drak bez generatora v case %d po %d polickach\n", dist[Drak.y][Drak.x].time, dist[Drak.y][Drak.x].steps);
+	Path startDrak, startGenerator, generatorDrak;
+	startDrak.cesta = NULL;
+	startGenerator.cesta = NULL;
+	generatorDrak.cesta = NULL;
 
+
+	// ReSharper disable CppLocalVariableMightNotBeInitialized
+	if (dist[Generator.y][Generator.x].steps >= 0)
+	{
+		startGenerator.steps = dist[Generator.y][Generator.x].steps;
+		startGenerator.time = dist[Generator.y][Generator.x].time;
+		startGenerator.cesta = malloc(startGenerator.steps * 2 * sizeof(int));
+		int index = dist[Generator.y][Generator.x].steps * 2;
+		Point* p = &Generator;
+		while (index > 0)
+		{
+			startGenerator.cesta[--index] = p->x;
+			startGenerator.cesta[--index] = p->y;
+			p = dist[p->y][p->x].back;
+		}
+	}
+	if (distGen[Drak.y][Drak.x].steps >= 0)
+	{
+		generatorDrak.steps = distGen[Drak.y][Drak.x].steps;
+		generatorDrak.time = distGen[Drak.y][Drak.x].time;
+		generatorDrak.cesta = malloc(generatorDrak.steps * 2 * sizeof(int));
+		int index = distGen[Drak.y][Drak.x].steps * 2;
+		Point* p = &Drak;
+		while (index > 0)
+		{
+			generatorDrak.cesta[--index] = p->x;
+			generatorDrak.cesta[--index] = p->y;
+			p = distGen[p->y][p->x].back;
+		}
 	}
 
-	if (distGen[Drak.y][Drak.x].steps > 0)
+	int startGenDrak = 0;
+
+	if (generatorDrak.cesta != NULL)
+		startGenDrak += generatorDrak.time;
+	if (startGenerator.cesta != NULL)
+		startGenDrak += startGenerator.time;
+
+	if(startGenDrak > t)
 	{
-		if(dist[Generator.y][Generator.x].steps)
+		free(startGenerator.cesta);
+		free(generatorDrak.cesta);
+		startGenerator.cesta = NULL;
+		generatorDrak.cesta = NULL;
+	}
+
+	if (dist[Drak.y][Drak.x].steps >= 0 && (generatorDrak.cesta == NULL || dist[Drak.y][Drak.x].steps < startGenDrak) )
+	{
+		startDrak.steps = dist[Drak.y][Drak.x].steps;
+		startDrak.time = dist[Drak.y][Drak.x].time;
+		startDrak.cesta = malloc(startDrak.steps * 2 * sizeof(int));
+		int index = dist[Drak.y][Drak.x].steps * 2;
+		Point* p = &Drak;
+		while (index > 0)
 		{
-			int realSteps = dist[Generator.y][Generator.x].steps + distGen[Drak.y][Drak.x].steps;
-			if (realSteps <= t)
-			{
-				printf("Start->Drak s generatorom v case %d po %d polickach\n", dist[Generator.y][Generator.x].time + distGen[Drak.y][Drak.x].time, realSteps);
-			}
-		}
-		else if(distGen[Drak.y][Drak.x].steps <= t)
-		{
-			printf("Start->Drak s generatorom v case %d po %d polickach\n", distGen[Drak.y][Drak.x].time, distGen[Drak.y][Drak.x].steps);
+			startDrak.cesta[--index] = p->x;
+			startDrak.cesta[--index] = p->y;
+			p = dist[p->y][p->x].back;
 		}
 	}
 	// ReSharper restore CppLocalVariableMightNotBeInitialized
+
+	if (startDrak.cesta != NULL)
+	{
+		printf("Start->Drak bez generatora v case %d po %d polickach\n", startDrak.time, startDrak.steps);
+		int i;
+		for (i = 0; i < startDrak.steps; ++i)
+			printf("[%d;%d] ", startDrak.cesta[i * 2], startDrak.cesta[i * 2 + 1]);
+		putchar('\n');
+	}
+
+	if (startGenerator.cesta != NULL)
+	{
+		printf("Start->Generator v case %d po %d polickach\n", startGenerator.time, startGenerator.steps);
+		int i;
+		for (i = 0; i < startGenerator.steps; ++i)
+			printf("[%d;%d] ", startGenerator.cesta[i * 2], startGenerator.cesta[i * 2 + 1]);
+		putchar('\n');
+	}
+
+	if (generatorDrak.cesta != NULL)
+	{
+		printf("Generator->Drak v case %d po %d polickach\n", generatorDrak.time, generatorDrak.steps);
+		int i;
+		for (i = 0; i < generatorDrak.steps; ++i)
+			printf("[%d;%d] ", generatorDrak.cesta[i * 2], generatorDrak.cesta[i * 2 + 1]);
+		putchar('\n');
+	}
 
 	int* result = NULL;
 	*dlzka_cesty = 0;
@@ -412,7 +481,7 @@ void main()
 	strncpy(mapa[9], "....................", m);
 
 	int dlzka_cesty;
-	int* cesta = zachran_princezne(mapa, n, m, 15, &dlzka_cesty);
+	int* cesta = zachran_princezne(mapa, n, m, 100, &dlzka_cesty);
 
 	printf("%d\n", dlzka_cesty);
 	for (i = 0; i < dlzka_cesty; ++i)
