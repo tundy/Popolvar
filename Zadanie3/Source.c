@@ -527,8 +527,8 @@ void main()
 	for (i = 0; i < n; i++)
 		mapa[i] = malloc(m * sizeof(char));
 
-	strncpy(mapa[0], "D...................", m);
-	strncpy(mapa[1], ".....1N...0.........", m);
+	strncpy(mapa[0], "....................", m);
+	strncpy(mapa[1], ".....1N.D.0.........", m);
 	strncpy(mapa[2], "H.....N........P....", m);
 	strncpy(mapa[3], "....................", m);
 	strncpy(mapa[4], "..H............P....", m);
@@ -541,7 +541,7 @@ void main()
 	int dlzka_cesty;
 	int* cesta = zachran_princezne(mapa, n, m, 100, &dlzka_cesty);
 
-	printf("%d\n", dlzka_cesty);
+	printf("Zachranit vsetky princezne dokazem v %d kokoch\n", dlzka_cesty);
 	for (i = 0; i < dlzka_cesty; ++i)
 		printf("%d %d\n", cesta[i * 2], cesta[i * 2 + 1]);
 
