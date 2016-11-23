@@ -615,12 +615,12 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 		else
 			vytvorCestu(Princezna3, distGen, &DrakPrincenza3GZ);
 
-		clear(dist, distGen, n, m);
+		/*clear(dist, distGen, n, m);
 		start = newStart(dist, distGen, Princezna1.x, Princezna1.y, OFF);
 		UDLR(n, m, queue, start, start->point);
 		dijkstra(mapa, n, m, teleporty, queue, dist, distGen, INT_MAX);
 		vytvorCestu(Princezna1, dist, &DrakPrincenza1GV);
-		vytvorCestu(Princezna1, dist, &DrakPrincenza1GV);
+		vytvorCestu(Princezna1, dist, &DrakPrincenza1GV);*/
 	}
 
 	// Cesta k drakovi s generatorom
