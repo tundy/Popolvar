@@ -285,7 +285,7 @@ void vytvorCestu(Point ciel, Title** dist, Path* pathBack)
 
 void vytvorStartDrak(int t, Point Drak, Point Generator, Title** dist, Title** distGen, Path* startDrak, Path* startGeneratorDrak)
 {
-	if (distGen[Drak.y][Drak.x].steps >= 0)
+	if (Generator.x != -1 && distGen[Drak.y][Drak.x].steps >= 0)
 	{
 		int index, offset = 0;
 		if (dist[Generator.y][Generator.x].steps > 0)
@@ -495,9 +495,9 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 	UDLR(n, m, queue, start, start->point);
 	dijkstra(mapa, n, m, teleporty, queue, dist, t);
 
-	clear(distGen, n, m);
-	if (Generator.x >= 0)
+	if (Generator.x != -1)
 	{
+		clear(distGen, n, m);
 		start = newStart(distGen, Generator.x, Generator.y, ON);
 		UDLR(n, m, queue, start, start->point);
 		dijkstra(mapa, n, m, teleporty, queue, distGen, t);
@@ -585,7 +585,8 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 		dijkstra(mapa, n, m, teleporty, queue, dist, INT_MAX);
 		vytvorCestu(Princezna2, dist, &P1P2GN);
 		vytvorCestu(Princezna3, dist, &P1P3GN);
-		vytvorCestu(Generator, dist, &P1G);
+		if (Generator.x != -1)
+			vytvorCestu(Generator, dist, &P1G);
 
 		clear(dist, n, m);
 		start = newStart(dist, Princezna2.x, Princezna2.y, OFF);
@@ -593,7 +594,8 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 		dijkstra(mapa, n, m, teleporty, queue, dist, INT_MAX);
 		vytvorCestu(Princezna1, dist, &P2P1GN);
 		vytvorCestu(Princezna3, dist, &P2P3GN);
-		vytvorCestu(Generator, dist, &P2G);
+		if (Generator.x != -1)
+			vytvorCestu(Generator, dist, &P2G);
 
 		clear(dist, n, m);
 		start = newStart(dist, Princezna3.x, Princezna3.y, OFF);
@@ -601,7 +603,8 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 		dijkstra(mapa, n, m, teleporty, queue, dist, INT_MAX);
 		vytvorCestu(Princezna1, dist, &P3P1GN);
 		vytvorCestu(Princezna2, dist, &P3P2GN);
-		vytvorCestu(Generator, dist, &P3G);
+		if (Generator.x != -1)
+			vytvorCestu(Generator, dist, &P3G);
 	}
 
 	// Cesta k drakovi s generatorom
