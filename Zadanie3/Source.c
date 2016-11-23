@@ -154,6 +154,8 @@ void clear(Title** dist, Title** distGen, int n, int m)
 		{
 			dist[y][x].time = INT_MAX;
 			distGen[y][x].time = INT_MAX;
+			dist[y][x].back = NULL;
+			distGen[y][x].back = NULL;
 			dist[y][x].steps = -1;
 			distGen[y][x].steps = -1;
 		}
@@ -200,13 +202,13 @@ QV* newStart(Title** dist, Title** distGen, int x, int y, int gen)
 	value->slowed = 0;
 	if (gen)
 	{
-		distGen[x][y].time = 0;
-		distGen[x][y].steps = 0;
+		distGen[y][x].time = 0;
+		distGen[y][x].steps = 0;
 	}
 	else
 	{
-		dist[x][y].time = 0;
-		dist[x][y].steps = 0;
+		dist[y][x].time = 0;
+		dist[y][x].steps = 0;
 	}
 	return value;
 }
@@ -273,6 +275,69 @@ void dijkstra(char** mapa, int n, int m, Teleport** teleporty, Queue* queue, Tit
 					addToQueue(mapa, n, m, teleporty, queue, value);
 				}
 			}
+		}
+	}
+}
+
+void StartDrak(int t, Point Drak, Point Generator, Title** dist, Title** distGen, Path* startDrak, Path* startGenerator, Path* generatorDrak)
+{
+	if (dist[Generator.y][Generator.x].steps >= 0)
+	{
+		startGenerator->steps = dist[Generator.y][Generator.x].steps;
+		startGenerator->time = dist[Generator.y][Generator.x].time;
+		startGenerator->cesta = malloc(startGenerator->steps * 2 * sizeof(int));
+		int index = dist[Generator.y][Generator.x].steps * 2;
+		Point* p = &Generator;
+		while (index > 0)
+		{
+			startGenerator->cesta[--index] = p->x;
+			startGenerator->cesta[--index] = p->y;
+			p = dist[p->y][p->x].back;
+		}
+	}
+	if (distGen[Drak.y][Drak.x].steps >= 0)
+	{
+		generatorDrak->steps = distGen[Drak.y][Drak.x].steps;
+		generatorDrak->time = distGen[Drak.y][Drak.x].time;
+		generatorDrak->cesta = malloc(generatorDrak->steps * 2 * sizeof(int));
+		int index = distGen[Drak.y][Drak.x].steps * 2;
+		Point* p = &Drak;
+		while (index > 0)
+		{
+			generatorDrak->cesta[--index] = p->x;
+			generatorDrak->cesta[--index] = p->y;
+			p = distGen[p->y][p->x].back;
+		}
+	}
+
+	int startGenDrak = 0;
+	if (generatorDrak->cesta != NULL)
+		startGenDrak += generatorDrak->time;
+	if (startGenerator->cesta != NULL)
+		startGenDrak += startGenerator->time;
+
+	// Ak sa k Drakovi pomocou generatora nedostanes ani v case t nema zmysel si to pamatat
+	if(startGenDrak > t)
+	{
+		free(startGenerator->cesta);
+		free(generatorDrak->cesta);
+		startGenerator->cesta = NULL;
+		generatorDrak->cesta = NULL;
+	}
+
+	// Ak cesta cez generator bola rychlejsie nema zmysel si pamatat cestu bez generatora
+	if (dist[Drak.y][Drak.x].steps >= 0 && (generatorDrak->cesta == NULL || dist[Drak.y][Drak.x].steps < startGenDrak) )
+	{
+		startDrak->steps = dist[Drak.y][Drak.x].steps;
+		startDrak->time = dist[Drak.y][Drak.x].time;
+		startDrak->cesta = malloc(startDrak->steps * 2 * sizeof(int));
+		int index = dist[Drak.y][Drak.x].steps * 2;
+		Point* p = &Drak;
+		while (index > 0)
+		{
+			startDrak->cesta[--index] = p->x;
+			startDrak->cesta[--index] = p->y;
+			p = dist[p->y][p->x].back;
 		}
 	}
 }
@@ -347,82 +412,50 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 	UDLR(n, m, queue, start, start->point);
 	dijkstra(mapa, n, m, teleporty, queue, dist, distGen, t);
 
-	Path startDrak, startGenerator, generatorDrak;
+	Path startDrak, startGenerator, generatorDrak, DrakGenerator;
 	startDrak.cesta = NULL;
 	startGenerator.cesta = NULL;
 	generatorDrak.cesta = NULL;
+	DrakGenerator.cesta = NULL;
 
-
-	// ReSharper disable CppLocalVariableMightNotBeInitialized
-	if (dist[Generator.y][Generator.x].steps >= 0)
-	{
-		startGenerator.steps = dist[Generator.y][Generator.x].steps;
-		startGenerator.time = dist[Generator.y][Generator.x].time;
-		startGenerator.cesta = malloc(startGenerator.steps * 2 * sizeof(int));
-		int index = dist[Generator.y][Generator.x].steps * 2;
-		Point* p = &Generator;
-		while (index > 0)
-		{
-			startGenerator.cesta[--index] = p->x;
-			startGenerator.cesta[--index] = p->y;
-			p = dist[p->y][p->x].back;
-		}
-	}
-	if (distGen[Drak.y][Drak.x].steps >= 0)
-	{
-		generatorDrak.steps = distGen[Drak.y][Drak.x].steps;
-		generatorDrak.time = distGen[Drak.y][Drak.x].time;
-		generatorDrak.cesta = malloc(generatorDrak.steps * 2 * sizeof(int));
-		int index = distGen[Drak.y][Drak.x].steps * 2;
-		Point* p = &Drak;
-		while (index > 0)
-		{
-			generatorDrak.cesta[--index] = p->x;
-			generatorDrak.cesta[--index] = p->y;
-			p = distGen[p->y][p->x].back;
-		}
-	}
-
-	int startGenDrak = 0;
-
-	if (generatorDrak.cesta != NULL)
-		startGenDrak += generatorDrak.time;
-	if (startGenerator.cesta != NULL)
-		startGenDrak += startGenerator.time;
-
-	if(startGenDrak > t)
-	{
-		free(startGenerator.cesta);
-		free(generatorDrak.cesta);
-		startGenerator.cesta = NULL;
-		generatorDrak.cesta = NULL;
-	}
-
-	if (dist[Drak.y][Drak.x].steps >= 0 && (generatorDrak.cesta == NULL || dist[Drak.y][Drak.x].steps < startGenDrak) )
-	{
-		startDrak.steps = dist[Drak.y][Drak.x].steps;
-		startDrak.time = dist[Drak.y][Drak.x].time;
-		startDrak.cesta = malloc(startDrak.steps * 2 * sizeof(int));
-		int index = dist[Drak.y][Drak.x].steps * 2;
-		Point* p = &Drak;
-		while (index > 0)
-		{
-			startDrak.cesta[--index] = p->x;
-			startDrak.cesta[--index] = p->y;
-			p = dist[p->y][p->x].back;
-		}
-	}
-	// ReSharper restore CppLocalVariableMightNotBeInitialized
+	StartDrak(t, Drak, Generator, dist, distGen, &startDrak, &startGenerator, &generatorDrak);
 
 	if (startDrak.cesta != NULL)
 	{
+		clear(dist, distGen, n, m);
+		start = newStart(dist, distGen, Drak.x, Drak.y, OFF);
+		UDLR(n, m, queue, start, start->point);
+		dijkstra(mapa, n, m, teleporty, queue, dist, distGen, INT_MAX);
+
+		if (dist[Generator.y][Generator.x].steps >= 0)
+		{
+			DrakGenerator.steps = dist[Generator.y][Generator.x].steps;
+			DrakGenerator.time = dist[Generator.y][Generator.x].time;
+			DrakGenerator.cesta = malloc(DrakGenerator.steps * 2 * sizeof(int));
+			int index = dist[Generator.y][Generator.x].steps * 2;
+			Point* p = &Generator;
+			while (index > 0)
+			{
+				DrakGenerator.cesta[--index] = p->x;
+				DrakGenerator.cesta[--index] = p->y;
+				p = dist[p->y][p->x].back;
+			}
+		}
+
+		// DEBUG:
 		printf("Start->Drak bez generatora v case %d po %d polickach\n", startDrak.time, startDrak.steps);
 		int i;
 		for (i = 0; i < startDrak.steps; ++i)
 			printf("[%d;%d] ", startDrak.cesta[i * 2], startDrak.cesta[i * 2 + 1]);
 		putchar('\n');
 	}
-
+	else
+	{
+		clear(dist, distGen, n, m);
+		start = newStart(dist, distGen, Drak.x, Drak.y, ON);
+		UDLR(n, m, queue, start, start->point);
+		dijkstra(mapa, n, m, teleporty, queue, dist, distGen, INT_MAX);
+	}
 	if (startGenerator.cesta != NULL)
 	{
 		printf("Start->Generator v case %d po %d polickach\n", startGenerator.time, startGenerator.steps);
@@ -431,7 +464,6 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 			printf("[%d;%d] ", startGenerator.cesta[i * 2], startGenerator.cesta[i * 2 + 1]);
 		putchar('\n');
 	}
-
 	if (generatorDrak.cesta != NULL)
 	{
 		printf("Generator->Drak v case %d po %d polickach\n", generatorDrak.time, generatorDrak.steps);
@@ -440,6 +472,15 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 			printf("[%d;%d] ", generatorDrak.cesta[i * 2], generatorDrak.cesta[i * 2 + 1]);
 		putchar('\n');
 	}
+	if (DrakGenerator.cesta != NULL)
+	{
+		printf("Drak->Generator v case %d po %d polickach\n", DrakGenerator.time, DrakGenerator.steps);
+		int i;
+		for (i = 0; i < DrakGenerator.steps; ++i)
+			printf("[%d;%d] ", DrakGenerator.cesta[i * 2], DrakGenerator.cesta[i * 2 + 1]);
+		putchar('\n');
+	}
+
 
 	int* result = NULL;
 	*dlzka_cesty = 0;
