@@ -237,7 +237,7 @@ void addToQueue(char** mapa, int n, int m, Teleport** teleporty, Queue* queue, Q
 
 void dijkstra(char** mapa, int n, int m, Teleport** teleporty, Queue* queue, Title** dist, int maxTime, Point point1, Point point2, Point point3, Point point4, Point gp)
 {
-	while (any(queue) && (dist[point1.y][point1.x].steps == -1 || dist[point2.y][point2.x].steps == -1 || dist[point3.y][point3.x].steps == -1 || dist[point1.y][point1.x].steps == -1 || (gp.x == -1 || dist[gp.y][gp.x].steps == -1)))
+	while (any(queue) && (dist[point1.y][point1.x].steps == -1 || dist[point2.y][point2.x].steps == -1 || dist[point3.y][point3.x].steps == -1 || dist[point4.y][point4.x].steps == -1 || (gp.x == -1 || dist[gp.y][gp.x].steps == -1)))
 	{
 		QV* value = top(queue);
 		pop(queue);
