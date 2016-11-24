@@ -100,15 +100,15 @@ int any(Queue* queue)
 	return queue->first != NULL;
 }
 
-/*void clear(Queue* queue)
+void clearQueue(Queue* queue)
 {
-while (queue->first)
-{
-qValue* temp = queue->first;
-queue->first = queue->first->next;
-free(temp);
+	while (queue->first)
+	{
+		qValue* temp = queue->first;
+		queue->first = queue->first->next;
+		free(temp);
+	}
 }
-}*/
 
 #ifdef _MSC_VER
 #pragma endregion
@@ -235,9 +235,9 @@ void addToQueue(char** mapa, int n, int m, Teleport** teleporty, Queue* queue, Q
 	}
 }
 
-void dijkstra(char** mapa, int n, int m, Teleport** teleporty, Queue* queue, Title** dist, int maxTime)
+void dijkstra(char** mapa, int n, int m, Teleport** teleporty, Queue* queue, Title** dist, int maxTime, Point point1, Point point2, Point point3, Point point4, Point gp)
 {
-	while (any(queue))
+	while (any(queue) && (dist[point1.y][point1.x].steps == -1 || dist[point2.y][point2.x].steps == -1 || dist[point3.y][point3.x].steps == -1 || dist[point1.y][point1.x].steps == -1 || (gp.x == -1 || dist[gp.y][gp.x].steps == -1)))
 	{
 		QV* value = top(queue);
 		pop(queue);
@@ -259,10 +259,15 @@ void dijkstra(char** mapa, int n, int m, Teleport** teleporty, Queue* queue, Tit
 
 		if (time < dist[value->point.y][value->point.x].time)
 		{
+			if(dist[value->point.y][value->point.x].time != INT_MAX)
+			{
+				printf("# ???\n");
+			}
 			updateDist(dist, value, time);
 			addToQueue(mapa, n, m, teleporty, queue, value);
 		}
 	}
+	clearQueue(queue);
 }
 
 void vytvorCestu(Point ciel, Title** dist, Path* pathBack)
@@ -493,14 +498,14 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 	clear(dist, n, m);
 	start = newStart(dist, startX, startY, mapa[startY][startX] == gene);
 	UDLR(n, m, queue, start, start->point);
-	dijkstra(mapa, n, m, teleporty, queue, dist, t);
+	dijkstra(mapa, n, m, teleporty, queue, dist, t, Drak, Princezna1, Princezna2, Princezna3, Generator);
 
 	if (Generator.x != -1)
 	{
 		clear(distGen, n, m);
 		start = newStart(distGen, Generator.x, Generator.y, ON);
 		UDLR(n, m, queue, start, start->point);
-		dijkstra(mapa, n, m, teleporty, queue, distGen, t);
+		dijkstra(mapa, n, m, teleporty, queue, distGen, t, Drak, Princezna1, Princezna2, Princezna3, Generator);
 	}
 	vytvorStartDrak(t, Drak, Generator, dist, distGen, &startDrak, &startGeneratorDrak);
 
@@ -514,7 +519,7 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 		clear(distGen, n, m);
 		start = newStart(distGen, Princezna1.x, Princezna1.y, ON);
 		UDLR(n, m, queue, start, start->point);
-		dijkstra(mapa, n, m, teleporty, queue, distGen, INT_MAX);
+		dijkstra(mapa, n, m, teleporty, queue, distGen, INT_MAX, Drak, Princezna1, Princezna2, Princezna3, Generator);
 		if (distGen[Princezna2.y][Princezna2.x].time == distGen[Princezna3.y][Princezna3.x].time)
 		{
 			vytvorCestu(Princezna3, distGen, &P1P3GZ);
@@ -528,7 +533,7 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 		clear(distGen, n, m);
 		start = newStart(distGen, Princezna2.x, Princezna2.y, ON);
 		UDLR(n, m, queue, start, start->point);
-		dijkstra(mapa, n, m, teleporty, queue, distGen, INT_MAX);
+		dijkstra(mapa, n, m, teleporty, queue, distGen, INT_MAX, Drak, Princezna1, Princezna2, Princezna3, Generator);
 		if (distGen[Princezna1.y][Princezna1.x].time == distGen[Princezna3.y][Princezna3.x].time)
 		{
 			vytvorCestu(Princezna1, distGen, &P2P1GZ);
@@ -542,7 +547,7 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 		clear(distGen, n, m);
 		start = newStart(distGen, Princezna3.x, Princezna3.y, ON);
 		UDLR(n, m, queue, start, start->point);
-		dijkstra(mapa, n, m, teleporty, queue, distGen, INT_MAX);
+		dijkstra(mapa, n, m, teleporty, queue, distGen, INT_MAX, Drak, Princezna1, Princezna2, Princezna3, Generator);
 		if (distGen[Princezna1.y][Princezna1.x].time == distGen[Princezna2.y][Princezna2.x].time)
 		{
 			vytvorCestu(Princezna1, distGen, &P3P1GZ);
@@ -557,7 +562,7 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 		clear(dist, n, m);
 		start = newStart(dist, Drak.x, Drak.y, ON);
 		UDLR(n, m, queue, start, start->point);
-		dijkstra(mapa, n, m, teleporty, queue, dist, INT_MAX);
+		dijkstra(mapa, n, m, teleporty, queue, dist, INT_MAX, Drak, Princezna1, Princezna2, Princezna3, Generator);
 		vytvorCestu(Princezna1, dist, &DrakPrincenza1GZ);
 		vytvorCestu(Princezna2, dist, &DrakPrincenza2GZ);
 		vytvorCestu(Princezna3, dist, &DrakPrincenza3GZ);
@@ -569,7 +574,7 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 		clear(dist, n, m);
 		start = newStart(dist, Drak.x, Drak.y, OFF);
 		UDLR(n, m, queue, start, start->point);
-		dijkstra(mapa, n, m, teleporty, queue, dist, INT_MAX);
+		dijkstra(mapa, n, m, teleporty, queue, dist, INT_MAX, Drak, Princezna1, Princezna2, Princezna3, Generator);
 
 		if (Generator.x != -1)
 			vytvorCestu(Generator, dist, &DrakGenerator);
@@ -582,7 +587,7 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 		clear(dist, n, m);
 		start = newStart(dist, Princezna1.x, Princezna1.y, OFF);
 		UDLR(n, m, queue, start, start->point);
-		dijkstra(mapa, n, m, teleporty, queue, dist, INT_MAX);
+		dijkstra(mapa, n, m, teleporty, queue, dist, INT_MAX, Drak, Princezna1, Princezna2, Princezna3, Generator);
 		vytvorCestu(Princezna2, dist, &P1P2GN);
 		vytvorCestu(Princezna3, dist, &P1P3GN);
 		if (Generator.x != -1)
@@ -591,7 +596,7 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 		clear(dist, n, m);
 		start = newStart(dist, Princezna2.x, Princezna2.y, OFF);
 		UDLR(n, m, queue, start, start->point);
-		dijkstra(mapa, n, m, teleporty, queue, dist, INT_MAX);
+		dijkstra(mapa, n, m, teleporty, queue, dist, INT_MAX, Drak, Princezna1, Princezna2, Princezna3, Generator);
 		vytvorCestu(Princezna1, dist, &P2P1GN);
 		vytvorCestu(Princezna3, dist, &P2P3GN);
 		if (Generator.x != -1)
@@ -600,7 +605,7 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 		clear(dist, n, m);
 		start = newStart(dist, Princezna3.x, Princezna3.y, OFF);
 		UDLR(n, m, queue, start, start->point);
-		dijkstra(mapa, n, m, teleporty, queue, dist, INT_MAX);
+		dijkstra(mapa, n, m, teleporty, queue, dist, INT_MAX, Drak, Princezna1, Princezna2, Princezna3, Generator);
 		vytvorCestu(Princezna1, dist, &P3P1GN);
 		vytvorCestu(Princezna2, dist, &P3P2GN);
 		if (Generator.x != -1)
@@ -780,16 +785,19 @@ void main()
 	for (i = 0; i < n; i++)
 		mapa[i] = malloc(m * sizeof(char));
 
-	strncpy(mapa[0], "..D.................", m);
-	strncpy(mapa[1], ".....1N...0.........", m);
-	strncpy(mapa[2], "H.....N........P....", m);
-	strncpy(mapa[3], "....................", m);
-	strncpy(mapa[4], "..H............P....", m);
+	strncpy(mapa[0], "....................", m);
+	strncpy(mapa[1], ".....1N.D.0.........", m);
+	strncpy(mapa[2], "......N........P....", m);
+	strncpy(mapa[3], "..H.................", m);
+	strncpy(mapa[4], "...............P....", m);
 	strncpy(mapa[5], "..G.0...............", m);
 	strncpy(mapa[6], "...............P....", m);
 	strncpy(mapa[7], "....................", m);
 	strncpy(mapa[8], "...............1....", m);
 	strncpy(mapa[9], "....................", m);
+
+	for(i = 10; i < n; i++)
+		strncpy(mapa[i], "....................", m);
 
 	int dlzka_cesty;
 	int* cesta = zachran_princezne(mapa, n, m, 100, &dlzka_cesty);
