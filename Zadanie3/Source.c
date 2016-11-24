@@ -429,7 +429,7 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 #endif
 	int x, y;
 	Point Drak, Princezna1, Princezna2, Princezna3, Generator;
-	Generator.x = -1;
+	/*Drak.x = Princezna1.x = Princezna2.x = Princezna3.x =*/ Generator.x = -1;
 	Teleport** teleporty = calloc(10, sizeof(Teleport*));
 
 	int temp = 1;
@@ -437,6 +437,8 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 	{
 		for (x = 0; x < m; x++)
 		{
+			//if (Drak.x != -1 && Princezna1.x != -1 && Princezna2.x != -1 && Princezna3.x != -1 && Generator.x != -1) break;
+
 			if (mapa[y][x] == prin)
 			{
 				mapa[y][x] += temp++;
@@ -509,6 +511,7 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 
 	QV* start;
 
+	// ReSharper disable CppLocalVariableMightNotBeInitialized
 	clear(dist, n, m, Drak, Princezna1, Princezna2, Princezna3, Generator);
 	start = newStart(dist, startX, startY, mapa[startY][startX] == gene);
 	UDLR(n, m, queue, start, start->point);
@@ -625,6 +628,7 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 		if (Generator.x != -1)
 			vytvorCestu(Generator, dist, &P3G);
 	}
+	// ReSharper restore CppLocalVariableMightNotBeInitialized
 
 	// Cesta k drakovi s generatorom
 	if (startGeneratorDrak.cesta)
