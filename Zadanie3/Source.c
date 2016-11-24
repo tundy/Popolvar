@@ -794,25 +794,28 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 
 void main()
 {
-	const int n = 10;
+	const int n = 1000;
 	const int m = 20;
 	char** mapa = malloc(n * sizeof(char*));
 	int i;
 	for (i = 0; i < n; i++)
 		mapa[i] = malloc(m * sizeof(char));
 
-	strncpy(mapa[0], "....................", m);
-	strncpy(mapa[1], ".....1N.D.0.........", m);
-	strncpy(mapa[2], "......N........P....", m);
-	strncpy(mapa[3], "..H.................", m);
-	strncpy(mapa[4], "...............P....", m);
-	strncpy(mapa[5], "..G.0...............", m);
-	strncpy(mapa[6], "...............P....", m);
-	strncpy(mapa[7], "....................", m);
-	strncpy(mapa[8], "...............1....", m);
-	strncpy(mapa[9], "....................", m);
+	for (i = 0; i < 5; i++)
+		strncpy(mapa[i], "....................", m);
 
-	for (i = 10; i < n; i++)
+	strncpy(mapa[i++], "....................", m);
+	strncpy(mapa[i++], ".....1N.D.0.........", m);
+	strncpy(mapa[i++], "......N........P....", m);
+	strncpy(mapa[i++], "..H.................", m);
+	strncpy(mapa[i++], "...............P....", m);
+	strncpy(mapa[i++], "..G.0...............", m);
+	strncpy(mapa[i++], "...............P....", m);
+	strncpy(mapa[i++], "....................", m);
+	strncpy(mapa[i++], "...............1....", m);
+	strncpy(mapa[i++], "....................", m);
+
+	for (; i < n; i++)
 		strncpy(mapa[i], "....................", m);
 
 	int dlzka_cesty;
