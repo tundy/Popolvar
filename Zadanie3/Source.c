@@ -310,6 +310,10 @@ static void vytvorStartDrak(int t, const Point Drak, const Point Generator, Titl
 			startGeneratorDrak->time = distGen[Drak.y][Drak.x].time + TIME(Generator);
 			offset = STEPS(Generator) * 2;
 		}
+		else if(Generator.x != startX || Generator.y != startY)
+		{
+			return;
+		}
 		else
 		{
 			startGeneratorDrak->steps = distGen[Drak.y][Drak.x].steps;
@@ -801,7 +805,7 @@ void main()
 	for (i = 0; i < n; i++)
 		mapa[i] = malloc(m * sizeof(char));
 
-	for (i = 0; i < 5; i++)
+	for (i = 0; i < 500; i++)
 		strncpy(mapa[i], "....................", m);
 
 	strncpy(mapa[i++], "....................", m);
