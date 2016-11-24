@@ -45,10 +45,7 @@ typedef struct queue
 	qValue* last;
 } Queue;
 
-Queue* newQueue()
-{
-	return (Queue*)calloc(1, sizeof(Queue));
-}
+#define newQueue() (Queue*)calloc(1, sizeof(Queue))
 
 void enqueue(Queue* queue, void* title)
 {
@@ -67,18 +64,18 @@ void enqueue(Queue* queue, void* title)
 
 /*void * dequeue(Queue* queue)
 {
-if (queue->first)
-{
-qValue* temp = queue->first;
-queue->first = queue->first->next;
-void * value = temp->value;
-free(temp);
-return value;
-}
-return NULL;
+	if (queue->first)
+	{
+		qValue* temp = queue->first;
+		queue->first = queue->first->next;
+		void * value = temp->value;
+		free(temp);
+		return value;
+	}
+	return NULL;
 }*/
 
-void* top(Queue* queue)
+void* top(const Queue* queue)
 {
 	if (queue->first)
 		return queue->first->value;
@@ -95,7 +92,7 @@ void pop(Queue* queue)
 	}
 }
 
-int any(Queue* queue)
+int any(const Queue* queue)
 {
 	return queue->first != NULL;
 }
@@ -161,7 +158,7 @@ typedef struct title
 	Point* back;
 } Title;
 
-void clear(Title** dist, int n, int m, Point point1, Point point2, Point point3, Point point4, Point gp)
+static void clear(Title** dist, const int n, const int m, const Point point1, const Point point2, const Point point3, const Point point4, const Point gp)
 {
 	int x, y;
 	for (y = 0; y < n; y++)
@@ -178,22 +175,22 @@ void clear(Title** dist, int n, int m, Point point1, Point point2, Point point3,
 	dist[point2.y][point2.x].steps = -1;
 	dist[point3.y][point3.x].steps = -1;
 	dist[point4.y][point4.x].steps = -1;
-	if(gp.x != -1)
+	if (gp.x != -1)
 		dist[gp.y][gp.x].steps = -1;
 }
 
-QV* newQV(QV* value, int y, int x)
+static QV* newQV(const QV* back, const int y, const int x)
 {
 	QV* new_qv = malloc(sizeof(QV));
-	new_qv->back = &value->point;
+	new_qv->back = (Point*)&back->point;
 	new_qv->point.y = y;
 	new_qv->point.x = x;
-	new_qv->generator = value->generator;
+	new_qv->generator = back->generator;
 	new_qv->slowed = 0;
 	return new_qv;
 }
 
-void UDLR(int n, int m, Queue* queue, QV* value, Point point)
+static void UDLR(const int n, const int m, Queue* queue, QV* value, Point point)
 {
 	if (point.y - 1 >= 0)
 		enqueue(queue, newQV(value, point.y - 1, point.x));
@@ -212,14 +209,14 @@ void UDLR(int n, int m, Queue* queue, QV* value, Point point)
 #define _TIME(point) dist[point->y][point->x].time
 //#define _MAP(point) mapa[point->y][point->x]
 
-void updateDist(Title** dist, QV* value, int time)
+static void updateDist(Title** dist, const QV* value, const int time)
 {
 	TIME(value->point) = time;
 	STEPS(value->point) = _STEPS(value->back) + 1;
 	dist[value->point.y][value->point.x].back = value->back;
 }
 
-QV* newStart(Title** dist, int x, int y, int gen)
+static QV* newStart(Title** dist, const int x, const int y, const int gen)
 {
 	QV* value = malloc(sizeof(QV));
 	value->point.x = x;
@@ -232,11 +229,11 @@ QV* newStart(Title** dist, int x, int y, int gen)
 	return value;
 }
 
-void addToQueue(char** mapa, int n, int m, Teleport** teleporty, Queue* queue, QV* value)
+static void addToQueue(const char** mapa, const int n, const int m, const Teleport** teleporty, Queue* queue, QV* value)
 {
 	if (value->generator && isTeleport(MAP(value->point)))
 	{
-		Teleport* teleport = teleporty[MAP(value->point) - '0'];
+		Teleport* teleport = (Teleport*)teleporty[MAP(value->point) - '0'];
 		while (teleport)
 		{
 			UDLR(n, m, queue, value, teleport->point);
@@ -249,7 +246,7 @@ void addToQueue(char** mapa, int n, int m, Teleport** teleporty, Queue* queue, Q
 	}
 }
 
-void dijkstra(char** mapa, int n, int m, Teleport** teleporty, Queue* queue, Title** dist, int maxTime, Point point1, Point point2, Point point3, Point point4, Point gp)
+static void dijkstra(const char** mapa, const int n, const int m, Teleport** teleporty, Queue* queue, Title** dist, const int maxTime, const Point point1, const Point point2, const Point point3, const Point point4, const Point gp)
 {
 	while (any(queue) && (STEPS(point1) == -1 || STEPS(point2) == -1 || STEPS(point3) == -1 || STEPS(point4) == -1 || (gp.x == -1 || STEPS(gp) == -1)))
 	{
@@ -273,7 +270,7 @@ void dijkstra(char** mapa, int n, int m, Teleport** teleporty, Queue* queue, Tit
 
 		if (time < TIME(value->point))
 		{
-			if(TIME(value->point) != INT_MAX)
+			if (TIME(value->point) != INT_MAX)
 			{
 				printf("# ???\n");
 			}
@@ -284,7 +281,7 @@ void dijkstra(char** mapa, int n, int m, Teleport** teleporty, Queue* queue, Tit
 	clearQueue(queue);
 }
 
-void vytvorCestu(Point ciel, Title** dist, Path* pathBack)
+static void vytvorCestu(const Point ciel, Title** dist, Path* pathBack)
 {
 	if (STEPS(ciel) >= 0)
 	{
@@ -292,7 +289,7 @@ void vytvorCestu(Point ciel, Title** dist, Path* pathBack)
 		pathBack->time = TIME(ciel);
 		pathBack->cesta = malloc(pathBack->steps * 2 * sizeof(int));
 		int index = pathBack->steps * 2;
-		Point* p = &ciel;
+		Point* p = (Point*)&ciel;
 		while (index > 0)
 		{
 			pathBack->cesta[--index] = p->x;
@@ -302,7 +299,7 @@ void vytvorCestu(Point ciel, Title** dist, Path* pathBack)
 	}
 }
 
-void vytvorStartDrak(int t, Point Drak, Point Generator, Title** dist, Title** distGen, Path* startDrak, Path* startGeneratorDrak)
+static void vytvorStartDrak(int t, const Point Drak, const Point Generator, Title** dist, Title** distGen, Path* startDrak, Path* startGeneratorDrak)
 {
 	if (Generator.x != -1 && distGen[Drak.y][Drak.x].steps >= 0)
 	{
@@ -324,7 +321,7 @@ void vytvorStartDrak(int t, Point Drak, Point Generator, Title** dist, Title** d
 		{
 			startGeneratorDrak->cesta = malloc(startGeneratorDrak->steps * 2 * sizeof(int));
 			index = distGen[Drak.y][Drak.x].steps * 2;
-			Point* p = &Drak;
+			Point* p = (Point*)&Drak;
 			while (index > 0)
 			{
 				startGeneratorDrak->cesta[offset + --index] = p->x;
@@ -353,7 +350,7 @@ void vytvorStartDrak(int t, Point Drak, Point Generator, Title** dist, Title** d
 				startDrak->time = dist[Drak.y][Drak.x].time;
 				startDrak->cesta = malloc(startDrak->steps * 2 * sizeof(int));
 				int index = STEPS(Drak) * 2;
-				Point* p = &Drak;
+				Point* p = (Point*)&Drak;
 				while (index > 0)
 				{
 					startDrak->cesta[--index] = p->x;
@@ -368,7 +365,7 @@ void vytvorStartDrak(int t, Point Drak, Point Generator, Title** dist, Title** d
 	//else printf("# Nedokazem sa dostat k drakovi bez generatora\n");
 }
 
-void vypisCestu(const Path pathBack, const char* cesta)
+static void vypisCestu(const Path pathBack, const char* cesta)
 {
 	if (pathBack.cesta != NULL)
 	{
@@ -380,7 +377,7 @@ void vypisCestu(const Path pathBack, const char* cesta)
 	}
 }
 
-void updateList(PathList* list, int n_args, ...)
+static void updateList(PathList* list, const int n_args, ...)
 {
 	int i, time = 0, steps = 0;
 	va_list ap;
@@ -429,7 +426,8 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 #endif
 	int x, y;
 	Point Drak, Princezna1, Princezna2, Princezna3, Generator;
-	/*Drak.x = Princezna1.x = Princezna2.x = Princezna3.x =*/ Generator.x = -1;
+	/*Drak.x = Princezna1.x = Princezna2.x = Princezna3.x =*/
+	Generator.x = -1;
 	Teleport** teleporty = calloc(10, sizeof(Teleport*));
 
 	int temp = 1;
@@ -754,7 +752,7 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 #endif
 	*/
 
-	int * result;
+	int* result;
 	if (list.parts)
 	{
 		*dlzka_cesty = list.steps;
@@ -796,8 +794,8 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 
 void main()
 {
-	int n = 10;
-	int m = 20;
+	const int n = 10;
+	const int m = 20;
 	char** mapa = malloc(n * sizeof(char*));
 	int i;
 	for (i = 0; i < n; i++)
@@ -814,7 +812,7 @@ void main()
 	strncpy(mapa[8], "...............1....", m);
 	strncpy(mapa[9], "....................", m);
 
-	for(i = 10; i < n; i++)
+	for (i = 10; i < n; i++)
 		strncpy(mapa[i], "....................", m);
 
 	int dlzka_cesty;
