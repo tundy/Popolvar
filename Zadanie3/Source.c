@@ -190,7 +190,7 @@ static QV* newQV(const QV* back, const int y, const int x)
 	return new_qv;
 }
 
-static void UDLR(const int n, const int m, Queue* queue, QV* value, Point point)
+static void UDLR(const int n, const int m, Queue* queue, QV* value, const Point point)
 {
 	if (point.y - 1 >= 0)
 		enqueue(queue, newQV(value, point.y - 1, point.x));
@@ -588,6 +588,7 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 	/*Drak.x = Princezna1.x = Princezna2.x = Princezna3.x =*/
 	Generator.x = -1;
 
+	// Zisti suradnice
 	InitRescue(mapa, n, m, &Drak, &Princezna1, &Princezna2, &Princezna3, &Generator, teleporty);
 
 	QV* start;
