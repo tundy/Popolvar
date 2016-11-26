@@ -310,7 +310,7 @@ static void vytvorStartDrak(int t, const Point Drak, const Point Generator, Titl
 			startGeneratorDrak->time = distGen[Drak.y][Drak.x].time + TIME(Generator);
 			offset = STEPS(Generator) * 2;
 		}
-		else if(Generator.x != startX || Generator.y != startY)
+		else if (Generator.x != startX || Generator.y != startY)
 		{
 			return;
 		}
@@ -423,18 +423,9 @@ static void updateList(PathList* list, const int n_args, ...)
 	}
 }
 
-int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
+static void InitRescue(char** mapa, const int n, const int m, Point* Drak, Point* Princezna1, Point* Princezna2, Point* Princezna3, Point* Generator, Teleport** teleporty)
 {
-#ifdef _MSC_VER
-#pragma region Init
-#endif
-	int x, y;
-	Point Drak, Princezna1, Princezna2, Princezna3, Generator;
-	/*Drak.x = Princezna1.x = Princezna2.x = Princezna3.x =*/
-	Generator.x = -1;
-	Teleport** teleporty = calloc(10, sizeof(Teleport*));
-
-	int temp = 1;
+	int x, y, temp = 1;
 	for (y = 0; y < n; y++)
 	{
 		for (x = 0; x < m; x++)
@@ -447,29 +438,29 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 				switch (mapa[y][x])
 				{
 				case p1:
-					Princezna1.x = x;
-					Princezna1.y = y;
+					Princezna1->x = x;
+					Princezna1->y = y;
 					break;
 				case p2:
-					Princezna2.x = x;
-					Princezna2.y = y;
+					Princezna2->x = x;
+					Princezna2->y = y;
 					break;
 				case p3:
-					Princezna3.x = x;
-					Princezna3.y = y;
+					Princezna3->x = x;
+					Princezna3->y = y;
 					break;
 				default: break;
 				}
 			}
 			else if (mapa[y][x] == drak)
 			{
-				Drak.x = x;
-				Drak.y = y;
+				Drak->x = x;
+				Drak->y = y;
 			}
 			else if (mapa[y][x] == gene)
 			{
-				Generator.x = x;
-				Generator.y = y;
+				Generator->x = x;
+				Generator->y = y;
 			}
 			else if (isTeleport(mapa[y][x]))
 			{
@@ -482,17 +473,126 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 			}
 		}
 	}
+}
 
-	Queue* queue = newQueue();
-	Title** dist = malloc(n * sizeof(Title*));
-	Title** distGen = malloc(n * sizeof(Title*));
-	for (y = 0; y < n; y++)
+static void fasterfrom2(const Point point1, const Point point2, Path* path1, Path* path2, const Title** dist)
+{
+	if (TIME(point1) == TIME(point2))
 	{
-		dist[y] = malloc(m * sizeof(Title));
-		distGen[y] = malloc(m * sizeof(Title));
+		vytvorCestu(point1, dist, path1);
+		vytvorCestu(point2, dist, path2);
 	}
+	else if (TIME(point1) < TIME(point2))
+		vytvorCestu(point1, dist, path1);
+	else
+		vytvorCestu(point2, dist, path2);
+}
 
-	Path startDrak, startGeneratorDrak, DrakGenerator;
+static void fasterfrom3(const Point point1, const Point point2, const Point point3, Path* path1, Path* path2, Path* path3, const Title** dist)
+{
+	if (TIME(point1) == TIME(point2))
+	{
+		if (TIME(point1) == TIME(point3))
+		{
+			// point1 == point2 == point3
+			vytvorCestu(point1, dist, path1);
+			vytvorCestu(point2, dist, path2);
+			vytvorCestu(point3, dist, path3);
+		}
+		else if (TIME(point3) < TIME(point1))
+		{
+			// point3 < point1 && point3 < point2
+			vytvorCestu(point3, dist, path3);
+		}
+		else
+		{
+			// point1 < point3 && point2 < point3 && point1 == point2
+			vytvorCestu(point1, dist, path1);
+			vytvorCestu(point2, dist, path2);
+		}
+	}
+	else if (TIME(point1) < TIME(point2))
+		fasterfrom2(point1, point3, path1, path3, dist);
+	else
+		fasterfrom2(point2, point3, path2, path3, dist);
+}
+
+static void sdgppp(const Path StartDrak, const Path DrakGenerator, const Path GeneratorPrincenza1, const Path GeneratorPrincenza2, const Path GeneratorPrincenza3, const Path P1P2GZ, const Path P1P3GZ, const Path P2P1GZ, const Path P2P3GZ, const Path P3P1GZ, const Path P3P2GZ, PathList* list)
+{
+	updateList(list, 5, &StartDrak, &DrakGenerator, &GeneratorPrincenza1, &P1P2GZ, &P2P3GZ);
+	updateList(list, 5, &StartDrak, &DrakGenerator, &GeneratorPrincenza1, &P1P3GZ, &P3P1GZ);
+
+	updateList(list, 5, &StartDrak, &DrakGenerator, &GeneratorPrincenza2, &P2P1GZ, &P1P3GZ);
+	updateList(list, 5, &StartDrak, &DrakGenerator, &GeneratorPrincenza2, &P2P3GZ, &P3P1GZ);
+
+	updateList(list, 5, &StartDrak, &DrakGenerator, &GeneratorPrincenza3, &P3P1GZ, &P1P2GZ);
+	updateList(list, 5, &StartDrak, &DrakGenerator, &GeneratorPrincenza3, &P3P2GZ, &P2P1GZ);
+}
+
+void sdppp(const Path StartDrak, const Path DrakPrincenza1GV, const Path DrakPrincenza2GV, const Path DrakPrincenza3GV, const Path P1P2GN, const Path P1P3GN, const Path P2P1GN, const Path P2P3GN, const Path P3P1GN, const Path P3P2GN, PathList* list)
+{
+	updateList(list, 4, &StartDrak, &DrakPrincenza1GV, &P1P2GN, &P2P3GN);
+	updateList(list, 4, &StartDrak, &DrakPrincenza1GV, &P1P3GN, &P3P2GN);
+
+	updateList(list, 4, &StartDrak, &DrakPrincenza2GV, &P2P1GN, &P1P3GN);
+	updateList(list, 4, &StartDrak, &DrakPrincenza2GV, &P2P3GN, &P3P1GN);
+
+	updateList(list, 4, &StartDrak, &DrakPrincenza3GV, &P3P1GN, &P1P2GN);
+	updateList(list, 4, &StartDrak, &DrakPrincenza3GV, &P3P2GN, &P2P1GN);
+}
+
+static void sdpgpp(const Path StartDrak, const Path DrakPrincenza1GV, const Path DrakPrincenza2GV, const Path DrakPrincenza3GV, const Path GeneratorPrincenza1, const Path GeneratorPrincenza2, const Path GeneratorPrincenza3, const Path P1P2GZ, const Path P1P3GZ, const Path P2P1GZ, const Path P2P3GZ, const Path P3P2GZ, const Path P1G, const Path P2G, const Path P3G, PathList* list)
+{
+	updateList(list, 5, &StartDrak, &DrakPrincenza1GV, &P1G, &GeneratorPrincenza2, &P2P3GZ);
+	updateList(list, 5, &StartDrak, &DrakPrincenza1GV, &P1G, &GeneratorPrincenza3, &P3P2GZ);
+
+	updateList(list, 5, &StartDrak, &DrakPrincenza2GV, &P2G, &GeneratorPrincenza1, &P1P3GZ);
+	updateList(list, 5, &StartDrak, &DrakPrincenza2GV, &P2G, &GeneratorPrincenza3, &P3P2GZ);
+
+	updateList(list, 5, &StartDrak, &DrakPrincenza3GV, &P3G, &GeneratorPrincenza1, &P1P2GZ);
+	updateList(list, 5, &StartDrak, &DrakPrincenza3GV, &P3G, &GeneratorPrincenza2, &P2P1GZ);
+}
+
+static void sdppgp(const Path StartDrak, const Path DrakPrincenza1GV, const Path DrakPrincenza2GV, const Path DrakPrincenza3GV, const Path GeneratorPrincenza1, const Path GeneratorPrincenza2, const Path GeneratorPrincenza3, const Path P1P2GN, const Path P1P3GN, const Path P2P1GN, const Path P2P3GN, const Path P3P1GN, const Path P3P2GN, const Path P1G, const Path P2G, const Path P3G, PathList* list)
+{
+	updateList(list, 5, &StartDrak, &DrakPrincenza1GV, &P1P2GN, &P2G, &GeneratorPrincenza3);
+	updateList(list, 5, &StartDrak, &DrakPrincenza1GV, &P1P3GN, &P3G, &GeneratorPrincenza2);
+
+	updateList(list, 5, &StartDrak, &DrakPrincenza2GV, &P2P1GN, &P1G, &GeneratorPrincenza3);
+	updateList(list, 5, &StartDrak, &DrakPrincenza2GV, &P2P3GN, &P3G, &GeneratorPrincenza1);
+
+	updateList(list, 5, &StartDrak, &DrakPrincenza3GV, &P3P1GN, &P1G, &GeneratorPrincenza2);
+	updateList(list, 5, &StartDrak, &DrakPrincenza3GV, &P3P2GN, &P2G, &GeneratorPrincenza1);
+}
+
+static void sgdppp(const Path StartGeneratorDrak, const Path DrakPrincenza1GZ, const Path DrakPrincenza2GZ, const Path DrakPrincenza3GZ, const Path P1P2GZ, const Path P1P3GZ, const Path P2P1GZ, const Path P2P3GZ, const Path P3P1GZ, const Path P3P2GZ, PathList* list)
+{
+	updateList(list, 4, &StartGeneratorDrak, &DrakPrincenza1GZ, &P1P2GZ, &P2P3GZ);
+	updateList(list, 4, &StartGeneratorDrak, &DrakPrincenza1GZ, &P1P3GZ, &P3P2GZ);
+
+	updateList(list, 4, &StartGeneratorDrak, &DrakPrincenza2GZ, &P2P1GZ, &P1P3GZ);
+	updateList(list, 4, &StartGeneratorDrak, &DrakPrincenza2GZ, &P2P3GZ, &P3P1GZ);
+
+	updateList(list, 4, &StartGeneratorDrak, &DrakPrincenza3GZ, &P3P1GZ, &P1P2GZ);
+	updateList(list, 4, &StartGeneratorDrak, &DrakPrincenza3GZ, &P3P2GZ, &P2P1GZ);
+}
+
+int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
+{
+#ifdef _MSC_VER
+#pragma region Init
+#endif
+	int i;
+	Teleport** teleporty = calloc(10, sizeof(Teleport*));
+	Point Drak, Princezna1, Princezna2, Princezna3, Generator;
+	/*Drak.x = Princezna1.x = Princezna2.x = Princezna3.x =*/
+	Generator.x = -1;
+
+	InitRescue(mapa, n, m, &Drak, &Princezna1, &Princezna2, &Princezna3, &Generator, teleporty);
+
+	QV* start;
+	Queue* queue = newQueue();
+	Path StartDrak, StartGeneratorDrak, DrakGenerator;
 	Path DrakPrincenza1GV, DrakPrincenza2GV, DrakPrincenza3GV;
 	Path DrakPrincenza1GZ, DrakPrincenza2GZ, DrakPrincenza3GZ;
 	Path GeneratorPrincenza1, GeneratorPrincenza2, GeneratorPrincenza3;
@@ -500,18 +600,25 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 	Path P1P2GN, P1P3GN, P2P1GN, P2P3GN, P3P1GN, P3P2GN;
 	Path P1G, P2G, P3G;
 
+	Title** dist = malloc(n * sizeof(Title*));
+	Title** distGen = malloc(n * sizeof(Title*));
+	for (i = 0; i < n; i++)
+	{
+		dist[i] = malloc(m * sizeof(Title));
+		distGen[i] = malloc(m * sizeof(Title));
+	}
+
 	P1G.cesta = P2G.cesta = P3G.cesta =
 		DrakPrincenza1GV.cesta = DrakPrincenza2GV.cesta = DrakPrincenza3GV.cesta =
 		DrakPrincenza1GZ.cesta = DrakPrincenza2GZ.cesta = DrakPrincenza3GZ.cesta =
 		GeneratorPrincenza1.cesta = GeneratorPrincenza2.cesta = GeneratorPrincenza3.cesta =
 		P1P2GZ.cesta = P1P3GZ.cesta = P2P1GZ.cesta = P2P3GZ.cesta = P3P1GZ.cesta = P3P2GZ.cesta =
 		P1P2GN.cesta = P1P3GN.cesta = P2P1GN.cesta = P2P3GN.cesta = P3P1GN.cesta = P3P2GN.cesta =
-		DrakGenerator.cesta = startGeneratorDrak.cesta = startDrak.cesta = NULL;
+		DrakGenerator.cesta = StartGeneratorDrak.cesta = StartDrak.cesta = NULL;
 #ifdef _MSC_VER
 #pragma endregion
 #endif
 
-	QV* start;
 
 	// ReSharper disable CppLocalVariableMightNotBeInitialized
 	clear(dist, n, m, Drak, Princezna1, Princezna2, Princezna3, Generator);
@@ -525,70 +632,40 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 		start = newStart(distGen, Generator.x, Generator.y, ON);
 		UDLR(n, m, queue, start, start->point);
 		dijkstra(mapa, n, m, teleporty, queue, distGen, t, Drak, Princezna1, Princezna2, Princezna3, Generator);
+		fasterfrom3(Princezna1, Princezna2, Princezna3, &GeneratorPrincenza1, &GeneratorPrincenza2, &GeneratorPrincenza3, distGen);
 	}
-	vytvorStartDrak(t, Drak, Generator, dist, distGen, &startDrak, &startGeneratorDrak);
+	vytvorStartDrak(t, Drak, Generator, dist, distGen, &StartDrak, &StartGeneratorDrak);
 
 	// PrincezneGeneratorOn
 	if (Generator.x != -1)
 	{
-		vytvorCestu(Princezna1, distGen, &GeneratorPrincenza1);
-		vytvorCestu(Princezna2, distGen, &GeneratorPrincenza2);
-		vytvorCestu(Princezna3, distGen, &GeneratorPrincenza3);
-
 		clear(distGen, n, m, Drak, Princezna1, Princezna2, Princezna3, Generator);
 		start = newStart(distGen, Princezna1.x, Princezna1.y, ON);
 		UDLR(n, m, queue, start, start->point);
 		dijkstra(mapa, n, m, teleporty, queue, distGen, INT_MAX, Drak, Princezna1, Princezna2, Princezna3, Generator);
-		if (distGen[Princezna2.y][Princezna2.x].time == distGen[Princezna3.y][Princezna3.x].time)
-		{
-			vytvorCestu(Princezna3, distGen, &P1P3GZ);
-			vytvorCestu(Princezna2, distGen, &P1P2GZ);
-		}
-		else if (distGen[Princezna2.y][Princezna2.x].time < distGen[Princezna3.y][Princezna3.x].time)
-			vytvorCestu(Princezna2, distGen, &P1P2GZ);
-		else
-			vytvorCestu(Princezna3, distGen, &P1P3GZ);
+		fasterfrom2(Princezna2, Princezna3, &P1P2GZ, &P1P3GZ, distGen);
 
 		clear(distGen, n, m, Drak, Princezna1, Princezna2, Princezna3, Generator);
 		start = newStart(distGen, Princezna2.x, Princezna2.y, ON);
 		UDLR(n, m, queue, start, start->point);
 		dijkstra(mapa, n, m, teleporty, queue, distGen, INT_MAX, Drak, Princezna1, Princezna2, Princezna3, Generator);
-		if (distGen[Princezna1.y][Princezna1.x].time == distGen[Princezna3.y][Princezna3.x].time)
-		{
-			vytvorCestu(Princezna1, distGen, &P2P1GZ);
-			vytvorCestu(Princezna3, distGen, &P2P3GZ);
-		}
-		else if (distGen[Princezna1.y][Princezna1.x].time < distGen[Princezna3.y][Princezna3.x].time)
-			vytvorCestu(Princezna1, distGen, &P2P1GZ);
-		else
-			vytvorCestu(Princezna3, distGen, &P2P3GZ);
+		fasterfrom2(Princezna1, Princezna3, &P2P1GZ, &P2P3GZ, distGen);
 
 		clear(distGen, n, m, Drak, Princezna1, Princezna2, Princezna3, Generator);
 		start = newStart(distGen, Princezna3.x, Princezna3.y, ON);
 		UDLR(n, m, queue, start, start->point);
 		dijkstra(mapa, n, m, teleporty, queue, distGen, INT_MAX, Drak, Princezna1, Princezna2, Princezna3, Generator);
-		if (distGen[Princezna1.y][Princezna1.x].time == distGen[Princezna2.y][Princezna2.x].time)
-		{
-			vytvorCestu(Princezna1, distGen, &P3P1GZ);
-			vytvorCestu(Princezna2, distGen, &P3P2GZ);
-		}
-		else if (distGen[Princezna1.y][Princezna1.x].time < distGen[Princezna2.y][Princezna2.x].time)
-			vytvorCestu(Princezna1, distGen, &P3P1GZ);
-		else
-			vytvorCestu(Princezna2, distGen, &P3P2GZ);
-
+		fasterfrom2(Princezna1, Princezna2, &P3P1GZ, &P3P2GZ, distGen);
 
 		clear(dist, n, m, Drak, Princezna1, Princezna2, Princezna3, Generator);
 		start = newStart(dist, Drak.x, Drak.y, ON);
 		UDLR(n, m, queue, start, start->point);
 		dijkstra(mapa, n, m, teleporty, queue, dist, INT_MAX, Drak, Princezna1, Princezna2, Princezna3, Generator);
-		vytvorCestu(Princezna1, dist, &DrakPrincenza1GZ);
-		vytvorCestu(Princezna2, dist, &DrakPrincenza2GZ);
-		vytvorCestu(Princezna3, dist, &DrakPrincenza3GZ);
+		fasterfrom3(Princezna1, Princezna2, Princezna3, &DrakPrincenza1GZ, &DrakPrincenza2GZ, &DrakPrincenza3GZ, dist);
 	}
 
 	// Cesta k drakovi bez generatora
-	if (startDrak.cesta)
+	if (StartDrak.cesta)
 	{
 		clear(dist, n, m, Drak, Princezna1, Princezna2, Princezna3, Generator);
 		start = newStart(dist, Drak.x, Drak.y, OFF);
@@ -633,15 +710,15 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 	// ReSharper restore CppLocalVariableMightNotBeInitialized
 
 	// Cesta k drakovi s generatorom
-	if (startGeneratorDrak.cesta)
+	if (StartGeneratorDrak.cesta)
 	{
 		// Existuje cesta Start->Drak->Generator v case t?
 		if (DrakGenerator.cesta)
 		{
-			if (startGeneratorDrak.time > DrakGenerator.time + startDrak.time)
+			if (StartGeneratorDrak.time > DrakGenerator.time + StartDrak.time)
 			{
-				free(startGeneratorDrak.cesta);
-				startGeneratorDrak.cesta = NULL;
+				free(StartGeneratorDrak.cesta);
+				StartGeneratorDrak.cesta = NULL;
 				//printf("# Aktivovat generator po drakovi je rychlejsie ako pred drakom\n");
 			}
 		}
@@ -652,65 +729,26 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 	list.parts = NULL;
 
 	// Start->Generator->Drak->Princezna->Princezna->Princezna
-	if (startGeneratorDrak.cesta)
-	{
-		updateList(&list, 4, &startGeneratorDrak, &DrakPrincenza1GZ, &P1P2GZ, &P2P3GZ);
-		updateList(&list, 4, &startGeneratorDrak, &DrakPrincenza1GZ, &P1P3GZ, &P3P2GZ);
-
-		updateList(&list, 4, &startGeneratorDrak, &DrakPrincenza2GZ, &P2P1GZ, &P1P3GZ);
-		updateList(&list, 4, &startGeneratorDrak, &DrakPrincenza2GZ, &P2P3GZ, &P3P1GZ);
-
-		updateList(&list, 4, &startGeneratorDrak, &DrakPrincenza3GZ, &P3P1GZ, &P1P2GZ);
-		updateList(&list, 4, &startGeneratorDrak, &DrakPrincenza3GZ, &P3P2GZ, &P2P1GZ);
-	}
+	if (StartGeneratorDrak.cesta)
+		sgdppp(StartGeneratorDrak, DrakPrincenza1GZ, DrakPrincenza2GZ, DrakPrincenza3GZ, P1P2GZ, P1P3GZ, P2P1GZ, P2P3GZ, P3P1GZ, P3P2GZ, &list);
 
 	// Start->Drak->...
-	if (startDrak.cesta)
+	if (StartDrak.cesta)
 	{
 		// Start->Drak->Generator->Princezna->Princezna->Princezna
 		if (DrakGenerator.cesta)
-		{
-			updateList(&list, 5, &startDrak, &DrakGenerator, &GeneratorPrincenza1, &P1P2GZ, &P2P3GZ);
-			updateList(&list, 5, &startDrak, &DrakGenerator, &GeneratorPrincenza1, &P1P3GZ, &P3P1GZ);
-
-			updateList(&list, 5, &startDrak, &DrakGenerator, &GeneratorPrincenza2, &P2P1GZ, &P1P3GZ);
-			updateList(&list, 5, &startDrak, &DrakGenerator, &GeneratorPrincenza2, &P2P3GZ, &P3P1GZ);
-
-			updateList(&list, 5, &startDrak, &DrakGenerator, &GeneratorPrincenza3, &P3P1GZ, &P1P2GZ);
-			updateList(&list, 5, &startDrak, &DrakGenerator, &GeneratorPrincenza3, &P3P2GZ, &P2P1GZ);
-		}
+			sdgppp(StartDrak, DrakGenerator, GeneratorPrincenza1, GeneratorPrincenza2, GeneratorPrincenza3, P1P2GZ, P1P3GZ, P2P1GZ, P2P3GZ, P3P1GZ, P3P2GZ, &list);
 
 		// Start->Drak->Princezna->Princezna->Princezna
-		updateList(&list, 4, &startDrak, &DrakPrincenza1GV, &P1P2GN, &P2P3GN);
-		updateList(&list, 4, &startDrak, &DrakPrincenza1GV, &P1P3GN, &P3P2GN);
-
-		updateList(&list, 4, &startDrak, &DrakPrincenza2GV, &P2P1GN, &P1P3GN);
-		updateList(&list, 4, &startDrak, &DrakPrincenza2GV, &P2P3GN, &P3P1GN);
-
-		updateList(&list, 4, &startDrak, &DrakPrincenza3GV, &P3P1GN, &P1P2GN);
-		updateList(&list, 4, &startDrak, &DrakPrincenza3GV, &P3P2GN, &P2P1GN);
+		sdppp(StartDrak, DrakPrincenza1GV, DrakPrincenza2GV, DrakPrincenza3GV, P1P2GN, P1P3GN, P2P1GN, P2P3GN, P3P1GN, P3P2GN, &list);
 
 		if (Generator.x != -1)
 		{
 			// Start->Drak->Princezna->Generator->Princezna->Princezna
-			updateList(&list, 5, &startDrak, &DrakPrincenza1GV, &P1G, &GeneratorPrincenza2, &P2P3GZ);
-			updateList(&list, 5, &startDrak, &DrakPrincenza1GV, &P1G, &GeneratorPrincenza3, &P3P2GZ);
-
-			updateList(&list, 5, &startDrak, &DrakPrincenza2GV, &P2G, &GeneratorPrincenza1, &P1P3GZ);
-			updateList(&list, 5, &startDrak, &DrakPrincenza2GV, &P2G, &GeneratorPrincenza3, &P3P2GZ);
-
-			updateList(&list, 5, &startDrak, &DrakPrincenza3GV, &P3G, &GeneratorPrincenza1, &P1P2GZ);
-			updateList(&list, 5, &startDrak, &DrakPrincenza3GV, &P3G, &GeneratorPrincenza2, &P2P1GZ);
+			sdpgpp(StartDrak, DrakPrincenza1GV, DrakPrincenza2GV, DrakPrincenza3GV, GeneratorPrincenza1, GeneratorPrincenza2, GeneratorPrincenza3, P1P2GZ, P1P3GZ, P2P1GZ, P2P3GZ, P3P2GZ, P1G, P2G, P3G, &list);
 
 			// Start->Drak->Princezna->Princezna->Generator->Princezna
-			updateList(&list, 5, &startDrak, &DrakPrincenza1GV, &P1P2GN, &P2G, &GeneratorPrincenza3);
-			updateList(&list, 5, &startDrak, &DrakPrincenza1GV, &P1P3GN, &P3G, &GeneratorPrincenza2);
-
-			updateList(&list, 5, &startDrak, &DrakPrincenza2GV, &P2P1GN, &P1G, &GeneratorPrincenza3);
-			updateList(&list, 5, &startDrak, &DrakPrincenza2GV, &P2P3GN, &P3G, &GeneratorPrincenza1);
-
-			updateList(&list, 5, &startDrak, &DrakPrincenza3GV, &P3P1GN, &P1G, &GeneratorPrincenza2);
-			updateList(&list, 5, &startDrak, &DrakPrincenza3GV, &P3P2GN, &P2G, &GeneratorPrincenza1);
+			sdppgp(StartDrak, DrakPrincenza1GV, DrakPrincenza2GV, DrakPrincenza3GV, GeneratorPrincenza1, GeneratorPrincenza2, GeneratorPrincenza3, P1P2GN, P1P3GN, P2P1GN, P2P3GN, P3P1GN, P3P2GN, P1G, P2G, P3G, &list);
 		}
 	}
 
@@ -718,9 +756,9 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 #ifdef _MSC_VER
 #pragma region Vypis
 #endif
-	vypisCestu(startDrak, TOSTRING(startDrak));
+	vypisCestu(StartDrak, TOSTRING(startDrak));
 	vypisCestu(DrakGenerator, TOSTRING(DrakGenerator));
-	vypisCestu(startGeneratorDrak, TOSTRING(startGeneratorDrak));
+	vypisCestu(StartGeneratorDrak, TOSTRING(startGeneratorDrak));
 
 	vypisCestu(DrakPrincenza1GV, TOSTRING(DrakPrincenza1GV));
 	vypisCestu(DrakPrincenza2GV, TOSTRING(DrakPrincenza2GV));
@@ -770,8 +808,8 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 			int end = part->part->steps * 2;
 			offset -= end;
 
-			for (y = 0; y < end; y++)
-				result[offset + y] = part->part->cesta[y];
+			for (i = 0; i < end; i++)
+				result[offset + i] = part->part->cesta[i];
 
 			part = part->next;
 		}
@@ -783,10 +821,10 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 	}
 
 	free(teleporty);
-	for (y = 0; y < n; y++)
+	for (i = 0; i < n; i++)
 	{
-		free(dist[y]);
-		free(distGen[y]);
+		free(dist[i]);
+		free(distGen[i]);
 	}
 	free(dist);
 	free(distGen);
@@ -805,12 +843,12 @@ void main()
 	for (i = 0; i < n; i++)
 		mapa[i] = malloc(m * sizeof(char));
 
-	for (i = 0; i < 500; i++)
+	for (i = 0; i < 0; i++)
 		strncpy(mapa[i], "....................", m);
 
 	strncpy(mapa[i++], "....................", m);
-	strncpy(mapa[i++], ".....1N.D.0.........", m);
-	strncpy(mapa[i++], "......N........P....", m);
+	strncpy(mapa[i++], "......N.D.0.........", m);
+	strncpy(mapa[i++], ".....1N........P....", m);
 	strncpy(mapa[i++], "..H.................", m);
 	strncpy(mapa[i++], "...............P....", m);
 	strncpy(mapa[i++], "..G.0...............", m);
