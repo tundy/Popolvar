@@ -517,18 +517,6 @@ static void fasterfrom3(const Point point1, const Point point2, const Point poin
 		fasterfrom2(point2, point3, path2, path3, dist);
 }
 
-static void sdgppp(const Path StartDrak, const Path DrakGenerator, const Path GeneratorPrincenza1, const Path GeneratorPrincenza2, const Path GeneratorPrincenza3, const Path P1P2GZ, const Path P1P3GZ, const Path P2P1GZ, const Path P2P3GZ, const Path P3P1GZ, const Path P3P2GZ, PathList* list)
-{
-	updateList(list, 5, &StartDrak, &DrakGenerator, &GeneratorPrincenza1, &P1P2GZ, &P2P3GZ);
-	updateList(list, 5, &StartDrak, &DrakGenerator, &GeneratorPrincenza1, &P1P3GZ, &P3P1GZ);
-
-	updateList(list, 5, &StartDrak, &DrakGenerator, &GeneratorPrincenza2, &P2P1GZ, &P1P3GZ);
-	updateList(list, 5, &StartDrak, &DrakGenerator, &GeneratorPrincenza2, &P2P3GZ, &P3P1GZ);
-
-	updateList(list, 5, &StartDrak, &DrakGenerator, &GeneratorPrincenza3, &P3P1GZ, &P1P2GZ);
-	updateList(list, 5, &StartDrak, &DrakGenerator, &GeneratorPrincenza3, &P3P2GZ, &P2P1GZ);
-}
-
 static void sdppp(const Path StartDrak, const Path DrakPrincenza1GV, const Path DrakPrincenza2GV, const Path DrakPrincenza3GV, const Path P1P2GN, const Path P1P3GN, const Path P2P1GN, const Path P2P3GN, const Path P3P1GN, const Path P3P2GN, PathList* list)
 {
 	updateList(list, 4, &StartDrak, &DrakPrincenza1GV, &P1P2GN, &P2P3GN);
@@ -539,6 +527,30 @@ static void sdppp(const Path StartDrak, const Path DrakPrincenza1GV, const Path 
 
 	updateList(list, 4, &StartDrak, &DrakPrincenza3GV, &P3P1GN, &P1P2GN);
 	updateList(list, 4, &StartDrak, &DrakPrincenza3GV, &P3P2GN, &P2P1GN);
+}
+
+static void sgdppp(const Path StartGeneratorDrak, const Path DrakPrincenza1GZ, const Path DrakPrincenza2GZ, const Path DrakPrincenza3GZ, const Path P1P2GZ, const Path P1P3GZ, const Path P2P1GZ, const Path P2P3GZ, const Path P3P1GZ, const Path P3P2GZ, PathList* list)
+{
+	updateList(list, 4, &StartGeneratorDrak, &DrakPrincenza1GZ, &P1P2GZ, &P2P3GZ);
+	updateList(list, 4, &StartGeneratorDrak, &DrakPrincenza1GZ, &P1P3GZ, &P3P2GZ);
+
+	updateList(list, 4, &StartGeneratorDrak, &DrakPrincenza2GZ, &P2P1GZ, &P1P3GZ);
+	updateList(list, 4, &StartGeneratorDrak, &DrakPrincenza2GZ, &P2P3GZ, &P3P1GZ);
+
+	updateList(list, 4, &StartGeneratorDrak, &DrakPrincenza3GZ, &P3P1GZ, &P1P2GZ);
+	updateList(list, 4, &StartGeneratorDrak, &DrakPrincenza3GZ, &P3P2GZ, &P2P1GZ);
+}
+
+static void sdgppp(const Path StartDrak, const Path DrakGenerator, const Path GeneratorPrincenza1, const Path GeneratorPrincenza2, const Path GeneratorPrincenza3, const Path P1P2GZ, const Path P1P3GZ, const Path P2P1GZ, const Path P2P3GZ, const Path P3P1GZ, const Path P3P2GZ, PathList* list)
+{
+	updateList(list, 5, &StartDrak, &DrakGenerator, &GeneratorPrincenza1, &P1P2GZ, &P2P3GZ);
+	updateList(list, 5, &StartDrak, &DrakGenerator, &GeneratorPrincenza1, &P1P3GZ, &P3P1GZ);
+
+	updateList(list, 5, &StartDrak, &DrakGenerator, &GeneratorPrincenza2, &P2P1GZ, &P1P3GZ);
+	updateList(list, 5, &StartDrak, &DrakGenerator, &GeneratorPrincenza2, &P2P3GZ, &P3P1GZ);
+
+	updateList(list, 5, &StartDrak, &DrakGenerator, &GeneratorPrincenza3, &P3P1GZ, &P1P2GZ);
+	updateList(list, 5, &StartDrak, &DrakGenerator, &GeneratorPrincenza3, &P3P2GZ, &P2P1GZ);
 }
 
 static void sdpgpp(const Path StartDrak, const Path DrakPrincenza1GV, const Path DrakPrincenza2GV, const Path DrakPrincenza3GV, const Path GeneratorPrincenza1, const Path GeneratorPrincenza2, const Path GeneratorPrincenza3, const Path P1P2GZ, const Path P1P3GZ, const Path P2P1GZ, const Path P2P3GZ, const Path P3P2GZ, const Path P1G, const Path P2G, const Path P3G, PathList* list)
@@ -563,18 +575,6 @@ static void sdppgp(const Path StartDrak, const Path DrakPrincenza1GV, const Path
 
 	updateList(list, 5, &StartDrak, &DrakPrincenza3GV, &P3P1GN, &P1G, &GeneratorPrincenza2);
 	updateList(list, 5, &StartDrak, &DrakPrincenza3GV, &P3P2GN, &P2G, &GeneratorPrincenza1);
-}
-
-static void sgdppp(const Path StartGeneratorDrak, const Path DrakPrincenza1GZ, const Path DrakPrincenza2GZ, const Path DrakPrincenza3GZ, const Path P1P2GZ, const Path P1P3GZ, const Path P2P1GZ, const Path P2P3GZ, const Path P3P1GZ, const Path P3P2GZ, PathList* list)
-{
-	updateList(list, 4, &StartGeneratorDrak, &DrakPrincenza1GZ, &P1P2GZ, &P2P3GZ);
-	updateList(list, 4, &StartGeneratorDrak, &DrakPrincenza1GZ, &P1P3GZ, &P3P2GZ);
-
-	updateList(list, 4, &StartGeneratorDrak, &DrakPrincenza2GZ, &P2P1GZ, &P1P3GZ);
-	updateList(list, 4, &StartGeneratorDrak, &DrakPrincenza2GZ, &P2P3GZ, &P3P1GZ);
-
-	updateList(list, 4, &StartGeneratorDrak, &DrakPrincenza3GZ, &P3P1GZ, &P1P2GZ);
-	updateList(list, 4, &StartGeneratorDrak, &DrakPrincenza3GZ, &P3P2GZ, &P2P1GZ);
 }
 
 int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
