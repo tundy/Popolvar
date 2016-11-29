@@ -524,6 +524,15 @@ void updateList(PathList* list, int n_args, ...)
 void InitRescue(char** mapa, int n, int m, Teleport** teleporty)
 {
 	int x, y, temp = 1;
+
+	P1G.cesta = P2G.cesta = P3G.cesta =
+		DrakPrincenza1GV.cesta = DrakPrincenza2GV.cesta = DrakPrincenza3GV.cesta =
+		DrakPrincenza1GZ.cesta = DrakPrincenza2GZ.cesta = DrakPrincenza3GZ.cesta =
+		GeneratorPrincenza1.cesta = GeneratorPrincenza2.cesta = GeneratorPrincenza3.cesta =
+		P1P2GZ.cesta = P1P3GZ.cesta = P2P1GZ.cesta = P2P3GZ.cesta = P3P1GZ.cesta = P3P2GZ.cesta =
+		P1P2GN.cesta = P1P3GN.cesta = P2P1GN.cesta = P2P3GN.cesta = P3P1GN.cesta = P3P2GN.cesta =
+		DrakGenerator.cesta = StartGeneratorDrak.cesta = StartDrak.cesta = NULL;
+
 	for (y = 0; y < n; y++)
 	{
 		for (x = 0; x < m; x++)
@@ -685,7 +694,7 @@ void sdppgp(PathList* list)
 	updateList(list, 5, &StartDrak, &DrakPrincenza3GV, &P3P2GN, &P2G, &GeneratorPrincenza1);
 }
 
-void startSearch(char** mapa, int n, int m, Teleport** teleporty, Point startPoint, Point point1, Point point2, Point point3, Point point4, int gStatus, Queue* queue, Title** dist)
+void startSearch(char** mapa, int n, int m, Teleport** teleporty, Point startPoint, int gStatus, Queue* queue, Title** dist, int t)
 {
 	clear(dist, n, m);
 	//printf("# clear in Search ... OK\n");
@@ -693,11 +702,11 @@ void startSearch(char** mapa, int n, int m, Teleport** teleporty, Point startPoi
 	//printf("# newStart in Search ... OK\n");
 	UDLR(n, m, queue, start, start->point);
 	//printf("# UDLR in Search ... OK\n");
-	dijkstra(mapa, n, m, teleporty, queue, dist, INT_MAX);
+	dijkstra(mapa, n, m, teleporty, queue, dist, t);
 	//printf("# dijkstra in Search ... OK\n");
 }
 
-void VypisCesty(Path StartDrak, Path StartGeneratorDrak, Path DrakGenerator, Path DrakPrincenza1GV, Path DrakPrincenza2GV, Path DrakPrincenza3GV, Path DrakPrincenza1GZ, Path DrakPrincenza2GZ, Path DrakPrincenza3GZ, Path GeneratorPrincenza1, Path GeneratorPrincenza2, Path GeneratorPrincenza3, Path P1P2GZ, Path P1P3GZ, Path P2P1GZ, Path P2P3GZ, Path P3P1GZ, Path P3P2GZ, Path P1P2GN, Path P1P3GN, Path P2P1GN, Path P2P3GN, Path P3P1GN, Path P3P2GN, Path P1G, Path P2G, Path P3G)
+void VypisCesty()
 {
 	vypisCestu(StartDrak, TOSTRING(StartDrak));
 	vypisCestu(DrakGenerator, TOSTRING(DrakGenerator));
@@ -764,14 +773,6 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 		if ((dist[i] = malloc(m * sizeof(Title))) == NULL) exit(13);
 		if ((distGen[i] = malloc(m * sizeof(Title))) == NULL) exit(14);
 	}
-
-	P1G.cesta = P2G.cesta = P3G.cesta =
-		DrakPrincenza1GV.cesta = DrakPrincenza2GV.cesta = DrakPrincenza3GV.cesta =
-		DrakPrincenza1GZ.cesta = DrakPrincenza2GZ.cesta = DrakPrincenza3GZ.cesta =
-		GeneratorPrincenza1.cesta = GeneratorPrincenza2.cesta = GeneratorPrincenza3.cesta =
-		P1P2GZ.cesta = P1P3GZ.cesta = P2P1GZ.cesta = P2P3GZ.cesta = P3P1GZ.cesta = P3P2GZ.cesta =
-		P1P2GN.cesta = P1P3GN.cesta = P2P1GN.cesta = P2P3GN.cesta = P3P1GN.cesta = P3P2GN.cesta =
-		DrakGenerator.cesta = StartGeneratorDrak.cesta = StartDrak.cesta = NULL;
 #ifdef _MSC_VER
 #pragma endregion
 #endif
@@ -786,10 +787,7 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 
 	if (Generator.x != -1)
 	{
-		clear(distGen, n, m);
-		start = newStart(distGen, Generator.x, Generator.y, ON);
-		UDLR(n, m, queue, start, start->point);
-		dijkstra(mapa, n, m, teleporty, queue, distGen, t);
+		startSearch(mapa, n, m, teleporty, Generator, ON, queue, distGen, t);
 		//fasterfrom3(Princezna1, Princezna2, Princezna3, &GeneratorPrincenza1, &GeneratorPrincenza2, &GeneratorPrincenza3, distGen);
 		vytvorCestu(Princezna1, distGen, &GeneratorPrincenza1);
 		vytvorCestu(Princezna2, distGen, &GeneratorPrincenza2);
@@ -801,22 +799,22 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 	// PrincezneGeneratorOn
 	if (Generator.x != -1)
 	{
-		startSearch(mapa, n, m, teleporty, Princezna1, Drak, Princezna2, Princezna3, Generator, ON, queue, dist);
+		startSearch(mapa, n, m, teleporty, Princezna1, ON, queue, dist, INT_MAX);
 		//fasterfrom2(Princezna2, Princezna3, &P1P2GZ, &P1P3GZ, dist);
 		vytvorCestu(Princezna2, dist, &P1P2GZ);
 		vytvorCestu(Princezna3, dist, &P1P3GZ);
 
-		startSearch(mapa, n, m, teleporty, Princezna2, Princezna1, Drak, Princezna3, Generator, ON, queue, dist);
+		startSearch(mapa, n, m, teleporty, Princezna2, ON, queue, dist, INT_MAX);
 		//fasterfrom2(Princezna1, Princezna3, &P2P1GZ, &P2P3GZ, dist);
 		vytvorCestu(Princezna1, dist, &P2P1GZ);
 		vytvorCestu(Princezna3, dist, &P2P3GZ);
 
-		startSearch(mapa, n, m, teleporty, Princezna3, Princezna1, Princezna2, Drak, Generator, ON, queue, dist);
+		startSearch(mapa, n, m, teleporty, Princezna3, ON, queue, dist, INT_MAX);
 		//fasterfrom2(Princezna1, Princezna2, &P3P1GZ, &P3P2GZ, dist);
 		vytvorCestu(Princezna1, dist, &P3P1GZ);
 		vytvorCestu(Princezna2, dist, &P3P2GZ);
 
-		startSearch(mapa, n, m, teleporty, Drak, Princezna1, Princezna2, Princezna3, Generator, ON, queue, dist);
+		startSearch(mapa, n, m, teleporty, Drak, ON, queue, dist, INT_MAX);
 		//fasterfrom3(Princezna1, Princezna2, Princezna3, &DrakPrincenza1GZ, &DrakPrincenza2GZ, &DrakPrincenza3GZ, dist);
 		vytvorCestu(Princezna1, dist, &DrakPrincenza1GZ);
 		vytvorCestu(Princezna2, dist, &DrakPrincenza2GZ);
@@ -827,7 +825,7 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 	if (StartDrak.cesta) // Cesta k drakovi bez generatora
 	{
 		// Drak->Princezne bez generatora
-		startSearch(mapa, n, m, teleporty, Drak, Princezna1, Princezna2, Princezna3, Generator, OFF, queue, dist);
+		startSearch(mapa, n, m, teleporty, Drak, OFF, queue, dist, INT_MAX);
 		//printf("# NoGenerator 1 Search ... OK\n");
 		vytvorCestu(Princezna1, dist, &DrakPrincenza1GV);
 		//printf("# NoGenerator 1 Create 1 ... OK\n");
@@ -840,21 +838,21 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 		//printf("# NoGenerator 1 Create 4 ... OK\n");
 		//printf("# NoGenerator 1 ... OK\n");
 
-		startSearch(mapa, n, m, teleporty, Princezna1, Drak, Princezna2, Princezna3, Generator, OFF, queue, dist);
+		startSearch(mapa, n, m, teleporty, Princezna1, OFF, queue, dist, INT_MAX);
 		vytvorCestu(Princezna2, dist, &P1P2GN);
 		vytvorCestu(Princezna3, dist, &P1P3GN);
 		if (Generator.x != -1)
 			vytvorCestu(Generator, dist, &P1G);
 		//printf("# NoGenerator 2 ... OK\n");
 
-		startSearch(mapa, n, m, teleporty, Princezna2, Princezna1, Drak, Princezna3, Generator, OFF, queue, dist);
+		startSearch(mapa, n, m, teleporty, Princezna2, OFF, queue, dist, INT_MAX);
 		vytvorCestu(Princezna1, dist, &P2P1GN);
 		vytvorCestu(Princezna3, dist, &P2P3GN);
 		if (Generator.x != -1)
 			vytvorCestu(Generator, dist, &P2G);
 		//printf("# NoGenerator 3 ... OK\n");
 
-		startSearch(mapa, n, m, teleporty, Princezna3, Princezna1, Princezna2, Drak, Generator, OFF, queue, dist);
+		startSearch(mapa, n, m, teleporty, Princezna3, OFF, queue, dist, INT_MAX);
 		vytvorCestu(Princezna1, dist, &P3P1GN);
 		vytvorCestu(Princezna2, dist, &P3P2GN);
 		if (Generator.x != -1)
@@ -1016,7 +1014,7 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 
 	printf("# Free ... OK\n");*/
 
-	printf("%d\n",*dlzka_cesty);
+	printf("%d\n", *dlzka_cesty);
 	for (i = 0; i < *dlzka_cesty; ++i)
 		printf("%d %d\n", result[i * 2], result[i * 2 + 1]);
 
