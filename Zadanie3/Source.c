@@ -161,6 +161,14 @@ typedef struct title
 	Point* back;
 } Title;
 
+Path StartDrak, StartGeneratorDrak, DrakGenerator;
+Path DrakPrincenza1GV, DrakPrincenza2GV, DrakPrincenza3GV;
+Path DrakPrincenza1GZ, DrakPrincenza2GZ, DrakPrincenza3GZ;
+Path GeneratorPrincenza1, GeneratorPrincenza2, GeneratorPrincenza3;
+Path P1P2GZ, P1P3GZ, P2P1GZ, P2P3GZ, P3P1GZ, P3P2GZ;
+Path P1P2GN, P1P3GN, P2P1GN, P2P3GN, P3P1GN, P3P2GN;
+Path P1G, P2G, P3G;
+
 void clear(Title** dist, int n, int m, Point point1, Point point2, Point point3, Point point4, Point gp)
 {
 	int x, y;
@@ -305,11 +313,8 @@ void dijkstra(char** mapa, int n, int m, Teleport** teleporty, Queue* queue, Tit
 
 		int time;
 
-		if (value->slowed == -1)
-		{
-			time = 0;
-		}
-		else
+		time = _TIME(value->back);
+		if (value->slowed != -1)
 		{
 			if (!value->slowed++ && MAP(value->point) == SLOW)
 			{
@@ -319,8 +324,7 @@ void dijkstra(char** mapa, int n, int m, Teleport** teleporty, Queue* queue, Tit
 				continue;
 			}
 
-			time = MAP(value->point) == SLOW ? 2 : 1;
-			time += _TIME(value->back);
+			time += MAP(value->point) == SLOW ? 2 : 1;
 		}
 		if (time < 0 || time > maxTime)
 		{
@@ -492,14 +496,14 @@ void updateList(PathList* list, int n_args, ...)
 	{
 		list->time = time;
 		list->steps = steps;
-		PathPart* temp2;
+		/*PathPart* temp2;
 		temp = list->parts;
 		while (temp)
 		{
 			temp2 = temp;
 			temp = temp->next;
 			free(temp2);
-		}
+		}*/
 		list->parts = partList;
 	}
 
@@ -656,13 +660,13 @@ void sdgppp(Path* StartDrak, Path* DrakGenerator, Path* GeneratorPrincenza1, Pat
 	updateList(list, 5, StartDrak, DrakGenerator, GeneratorPrincenza3, P3P2GZ, P2P1GZ);
 }
 
-void sdpgpp(Path* StartDrak, Path* DrakPrincenza1GV, Path* DrakPrincenza2GV, Path* DrakPrincenza3GV, Path* GeneratorPrincenza1, Path* GeneratorPrincenza2, Path* GeneratorPrincenza3, Path* P1P2GZ, Path* P1P3GZ, Path* P2P1GZ, Path* P2P3GZ, Path* P3P2GZ, Path* P1G, Path* P2G, Path* P3G, PathList* list)
+void sdpgpp(Path* StartDrak, Path* DrakPrincenza1GV, Path* DrakPrincenza2GV, Path* DrakPrincenza3GV, Path* GeneratorPrincenza1, Path* GeneratorPrincenza2, Path* GeneratorPrincenza3, Path* P1P2GZ, Path* P1P3GZ, Path* P2P1GZ, Path* P2P3GZ, Path* P3P1GZ, Path* P3P2GZ, Path* P1G, Path* P2G, Path* P3G, PathList* list)
 {
 	updateList(list, 5, StartDrak, DrakPrincenza1GV, P1G, GeneratorPrincenza2, P2P3GZ);
 	updateList(list, 5, StartDrak, DrakPrincenza1GV, P1G, GeneratorPrincenza3, P3P2GZ);
 
 	updateList(list, 5, StartDrak, DrakPrincenza2GV, P2G, GeneratorPrincenza1, P1P3GZ);
-	updateList(list, 5, StartDrak, DrakPrincenza2GV, P2G, GeneratorPrincenza3, P3P2GZ);
+	updateList(list, 5, StartDrak, DrakPrincenza2GV, P2G, GeneratorPrincenza3, P3P1GZ);
 
 	updateList(list, 5, StartDrak, DrakPrincenza3GV, P3G, GeneratorPrincenza1, P1P2GZ);
 	updateList(list, 5, StartDrak, DrakPrincenza3GV, P3G, GeneratorPrincenza2, P2P1GZ);
@@ -731,10 +735,6 @@ void VypisCesty(Path StartDrak, Path StartGeneratorDrak, Path DrakGenerator, Pat
 
 int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 {
-	//int k;
-	//for (k = 0; k < n; k++)
-	//	printf("%.*s\n", m, mapa[k]);
-
 #ifdef _MSC_VER
 #pragma region Init
 #endif
@@ -748,15 +748,12 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 	InitRescue(mapa, n, m, &Drak, &Princezna1, &Princezna2, &Princezna3, &Generator, teleporty);
 	//printf("# InitRescue ... OK\n");
 
+	//int k;
+	//for (k = 0; k < n; k++)
+	//	printf("%.*s\n", m, mapa[k]);
+
 	QV* start;
 	Queue* queue = newQueue();
-	Path StartDrak, StartGeneratorDrak, DrakGenerator;
-	Path DrakPrincenza1GV, DrakPrincenza2GV, DrakPrincenza3GV;
-	Path DrakPrincenza1GZ, DrakPrincenza2GZ, DrakPrincenza3GZ;
-	Path GeneratorPrincenza1, GeneratorPrincenza2, GeneratorPrincenza3;
-	Path P1P2GZ, P1P3GZ, P2P1GZ, P2P3GZ, P3P1GZ, P3P2GZ;
-	Path P1P2GN, P1P3GN, P2P1GN, P2P3GN, P3P1GN, P3P2GN;
-	Path P1G, P2G, P3G;
 
 	Title** dist = malloc(n * sizeof(Title*));
 	if (dist == NULL) exit(11);
@@ -778,7 +775,7 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 #ifdef _MSC_VER
 #pragma endregion
 #endif
-	//printf("# Init ... OK\n");
+	printf("# Init ... OK\n");
 
 	// ReSharper disable CppLocalVariableMightNotBeInitialized
 	clear(dist, n, m, Drak, Princezna1, Princezna2, Princezna3, Generator);
@@ -800,7 +797,7 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 	}
 	//printf("# Dist 2 ... OK\n");
 	vytvorStartDrak(t, Drak, Generator, dist, distGen, &StartDrak, &StartGeneratorDrak);
-	//printf("# Start ... OK\n");
+	printf("# Start ... OK\n");
 	// PrincezneGeneratorOn
 	if (Generator.x != -1)
 	{
@@ -825,7 +822,7 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 		vytvorCestu(Princezna2, dist, &DrakPrincenza2GZ);
 		vytvorCestu(Princezna3, dist, &DrakPrincenza3GZ);
 	}
-	//printf("# PrincezneGeneratorOn ... OK\n");
+	printf("# PrincezneGeneratorOn ... OK\n");
 
 	if (StartDrak.cesta) // Cesta k drakovi bez generatora
 	{
@@ -866,7 +863,7 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 	}
 	// ReSharper restore CppLocalVariableMightNotBeInitialized
 
-	//printf("# NoGenerator ... OK\n");
+	printf("# NoGenerator ... OK\n");
 	// Cesta k drakovi s generatorom
 	if (StartGeneratorDrak.cesta)
 	{
@@ -881,7 +878,7 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 			}
 		}
 	}
-	//printf("# SGD ... OK\n");
+	printf("# SGD ... OK\n");
 
 	PathList list;
 	list.time = INT_MAX;
@@ -914,13 +911,13 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 		if (Generator.x != -1)
 		{
 			// Start->Drak->Princezna->Generator->Princezna->Princezna
-			sdpgpp(&StartDrak, &DrakPrincenza1GV, &DrakPrincenza2GV, &DrakPrincenza3GV, &GeneratorPrincenza1, &GeneratorPrincenza2, &GeneratorPrincenza3, &P1P2GZ, &P1P3GZ, &P2P1GZ, &P2P3GZ, &P3P2GZ, &P1G, &P2G, &P3G, &list);
+			sdpgpp(&StartDrak, &DrakPrincenza1GV, &DrakPrincenza2GV, &DrakPrincenza3GV, &GeneratorPrincenza1, &GeneratorPrincenza2, &GeneratorPrincenza3, &P1P2GZ, &P1P3GZ, &P2P1GZ, &P2P3GZ, &P3P1GN, &P3P2GZ, &P1G, &P2G, &P3G, &list);
 
 			// Start->Drak->Princezna->Princezna->Generator->Princezna
 			sdppgp(&StartDrak, &DrakPrincenza1GV, &DrakPrincenza2GV, &DrakPrincenza3GV, &GeneratorPrincenza1, &GeneratorPrincenza2, &GeneratorPrincenza3, &P1P2GN, &P1P3GN, &P2P1GN, &P2P3GN, &P3P1GN, &P3P2GN, &P1G, &P2G, &P3G, &list);
 		}
 	}
-	//printf("# Search ... OK\n");
+	printf("# Search ... OK\n");
 
 	//VypisCesty(StartDrak, StartGeneratorDrak, DrakGenerator, DrakPrincenza1GV, DrakPrincenza2GV, DrakPrincenza3GV, DrakPrincenza1GZ, DrakPrincenza2GZ, DrakPrincenza3GZ, GeneratorPrincenza1, GeneratorPrincenza2, GeneratorPrincenza3, P1P2GZ, P1P3GZ, P2P1GZ, P2P3GZ, P3P1GZ, P3P2GZ, P1P2GN, P1P3GN, P2P1GN, P2P3GN, P3P1GN, P3P2GN, P1G, P2G, P3G);
 
@@ -960,9 +957,22 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 		result = NULL;
 		*dlzka_cesty = 0;
 	}
-	//printf("# Result ... OK\n");
+	printf("# Result ... OK\n");
 
+
+	/*Teleport * tTemp;
+	for(i = 0; i < 10; i++)
+	{
+		while(teleporty[i])
+		{
+			tTemp = teleporty[i];
+			teleporty[i] = tTemp->next;
+			free(tTemp);
+		}
+	}
 	free(teleporty);
+	printf("# Free TP ... OK\n");
+
 	for (i = 0; i < n; i++)
 	{
 		free(dist[i]);
@@ -970,12 +980,45 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 	}
 	free(dist);
 	free(distGen);
+	printf("# Free Dist ... OK\n");
 
-	//printf("# Free ... OK\n");
+	free(StartDrak.cesta); 
+	free(StartGeneratorDrak.cesta);
+	free(DrakGenerator.cesta);
+	printf("# Free S ... OK\n");
+	free(DrakPrincenza1GV.cesta);
+	free(DrakPrincenza2GV.cesta);
+	free(DrakPrincenza3GV.cesta);
+	free(DrakPrincenza1GZ.cesta);
+	free(DrakPrincenza2GZ.cesta);
+	free(DrakPrincenza3GZ.cesta);
+	printf("# Free D ... OK\n");
+	free(GeneratorPrincenza1.cesta);
+	free(GeneratorPrincenza2.cesta);
+	free(GeneratorPrincenza3.cesta);
+	printf("# Free G ... OK\n");
+	free(P1P2GZ.cesta);
+	free(P1P3GZ.cesta);
+	free(P2P1GZ.cesta);
+	free(P2P3GZ.cesta);
+	free(P3P1GZ.cesta);
+	free(P3P2GZ.cesta);
+	free(P1P2GN.cesta);
+	free(P1P3GN.cesta);
+	free(P2P1GN.cesta);
+	free(P2P3GN.cesta);
+	free(P3P1GN.cesta);
+	free(P3P2GN.cesta);
+	printf("# Free P ... OK\n");
+	free(P1G.cesta);
+	free(P2G.cesta);
+	free(P3G.cesta);
 
-	//printf("%d\n",*dlzka_cesty);
-	//for (i = 0; i < *dlzka_cesty; ++i)
-	//	printf("%d %d\n", result[i * 2], result[i * 2 + 1]);
+	printf("# Free ... OK\n");*/
+
+	printf("%d\n",*dlzka_cesty);
+	for (i = 0; i < *dlzka_cesty; ++i)
+		printf("%d %d\n", result[i * 2], result[i * 2 + 1]);
 
 	//if (*dlzka_cesty == 44)
 	//	*dlzka_cesty = 0;
@@ -987,8 +1030,8 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 
 void main()
 {
-	int n = 40;
-	int m = 50;
+	int n = 100;
+	int m = 10;
 	char** mapa = malloc(n * sizeof(char*));
 	int i;
 	for (i = 0; i < n; i++)
@@ -1013,7 +1056,7 @@ void main()
 	strncpy(mapa[i++], "CCDCCHCHCCC", m);
 	strncpy(mapa[i], "CCCCCHCCCHH", m);*/
 
-	strncpy(mapa[i++], "CCCCCCCCHGCCCHCCCCCCHCCCCCCCHCCCHHHCHCCCCCCCCCCCCC", m);
+	/*strncpy(mapa[i++], "CCCCCCCCHGCCCHCCCCCCHCCCCCCCHCCCHHHCHCCCCCCCCCCCCC", m);
 	strncpy(mapa[i++], "CCCCCCCHC2CHCCCHCHCCCCCHHHCHCCHHHCCC0CCCCHCCHCCCCC", m);
 	strncpy(mapa[i++], "CCCHCCCC0CCC2CCCCHCCCCHCCCCCCCCCHCCCCCCHCCCCCHHCHC", m);
 	strncpy(mapa[i++], "CHCCCCCCCCCCCCCCCCCHHHCCCCHCHCHCHCC3CCHCCCCHCCCHCC", m);
@@ -1052,7 +1095,108 @@ void main()
 	strncpy(mapa[i++], "CCHCCCHCCCCCCCCCCC2CCCCCCHCCCCCCHCCCCCCCHCCCHCCCCC", m);
 	strncpy(mapa[i++], "HCCCCHHHCCCCCCHCCCHCHCCCCHCCCHCCCCCHCCCCCCCCCCCHCH", m);
 	strncpy(mapa[i++], "CHHHHHHHCCHCCCCCHCCCHCCCCCCCCHCHCCCCCCCHHCCCCHCCC0", m);
-	strncpy(mapa[i], "CCCCHHCCCHHCHCCCCCHHCCCHCCCCCCHHCCCCCCCHCCCHCCCCCC", m);
+	strncpy(mapa[i], "CCCCHHCCCHHCHCCCCCHHCCCHCCCCCCHHCCCCCCCHCCCHCCCCCC", m);*/
+
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], "....0.....", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], "....0.....", m);
+	strncpy(mapa[i++], "........P.", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], ".P........", m);
+	strncpy(mapa[i++], "..D3......", m);
+	strncpy(mapa[i++], ".0........", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], "0.........", m);
+	strncpy(mapa[i++], ".......H..", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], "........H.", m);
+	strncpy(mapa[i++], ".......0..", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], "...H...2..", m);
+	strncpy(mapa[i++], "...1......", m);
+	strncpy(mapa[i++], "G.........", m);
+	strncpy(mapa[i++], ".0........", m);
+	strncpy(mapa[i++], "........2.", m);
+	strncpy(mapa[i++], "...H......", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], "2.........", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], "...2......", m);
+	strncpy(mapa[i++], "2.........", m);
+	strncpy(mapa[i++], "...P......", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], "..3.......", m);
+	strncpy(mapa[i++], ".H........", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], "0......H..", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], ".3........", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], "...3......", m);
+	strncpy(mapa[i++], "........1.", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], ".....3....", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], "........3.", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], ".2...1....", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], "....3.....", m);
+	strncpy(mapa[i++], "..3.......", m);
+	strncpy(mapa[i++], ".......2..", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], ".....0....", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], ".H........", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], ".....0....", m);
+	strncpy(mapa[i++], ".....H....", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], "......2...", m);
+	strncpy(mapa[i++], "2.........", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], "1...0.....", m);
+	strncpy(mapa[i++], "...2..3...", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], ".....0....", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i++], ".......0..", m);
+	strncpy(mapa[i++], "..........", m);
+	strncpy(mapa[i], "..........", m);
 
 	/*for (i = 0; i < 0; i++)
 	strncpy(mapa[i], "....................", m);
@@ -1072,7 +1216,7 @@ void main()
 	strncpy(mapa[i], "....................", m);*/
 
 	int dlzka_cesty;
-	int* cesta = zachran_princezne(mapa, n, m, 272, &dlzka_cesty);
+	int* cesta = zachran_princezne(mapa, n, m, 425, &dlzka_cesty);
 
 	printf("Zachranit vsetky princezne dokazem v %d kokoch\n", dlzka_cesty);
 	for (i = 0; i < dlzka_cesty; ++i)
