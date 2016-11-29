@@ -184,10 +184,10 @@ void clear(Title** dist, int n, int m, Point point1, Point point2, Point point3,
 
 QV* newQV(QV* back, int y, int x)
 {
-	if(back == NULL)
+	if (back == NULL)
 		exit(2);
 	QV* new_qv = malloc(sizeof(QV));
-	if(new_qv == NULL)
+	if (new_qv == NULL)
 		exit(1);
 	new_qv->back = (Point*)&back->point;
 	new_qv->point.y = y;
@@ -260,7 +260,7 @@ void addToQueue(char** mapa, int n, int m, Teleport** teleporty, Queue* queue, Q
 			//UDLR(n, m, queue, value, teleport->point);
 			if (teleport->point.x != value->point.x || teleport->point.y != value->point.y)
 			{
-				QV * temp = newQV(value, teleport->point.y, teleport->point.x);
+				QV* temp = newQV(value, teleport->point.y, teleport->point.x);
 				temp->slowed = -1;
 				enqueue(queue, temp);
 			}
@@ -305,11 +305,11 @@ void dijkstra(char** mapa, int n, int m, Teleport** teleporty, Queue* queue, Tit
 
 		int time;
 
-		if(value->slowed == -1)
+		if (value->slowed == -1)
 		{
 			time = 0;
 		}
-		else 
+		else
 		{
 			if (!value->slowed++ && MAP(value->point) == SLOW)
 			{
@@ -492,9 +492,9 @@ void updateList(PathList* list, int n_args, ...)
 	{
 		list->time = time;
 		list->steps = steps;
-		PathPart * temp2;
+		PathPart* temp2;
 		temp = list->parts;
-		while(temp)
+		while (temp)
 		{
 			temp2 = temp;
 			temp = temp->next;
@@ -612,7 +612,7 @@ void fasterfrom3(Point point1, Point point2, Point point3, Path* path1, Path* pa
 		fasterfrom2(point2, point3, path2, path3, dist);
 }
 
-void sdppp(Path * StartDrak, Path* DrakPrincenza1GV, Path *DrakPrincenza2GV, Path* DrakPrincenza3GV, Path *P1P2GN, Path *P1P3GN, Path *P2P1GN, Path* P2P3GN, Path* P3P1GN, Path* P3P2GN, PathList* list)
+void sdppp(Path* StartDrak, Path* DrakPrincenza1GV, Path* DrakPrincenza2GV, Path* DrakPrincenza3GV, Path* P1P2GN, Path* P1P3GN, Path* P2P1GN, Path* P2P3GN, Path* P3P1GN, Path* P3P2GN, PathList* list)
 {
 	updateList(list, 4, StartDrak, DrakPrincenza1GV, P1P2GN, P2P3GN);
 	updateList(list, 4, StartDrak, DrakPrincenza1GV, P1P3GN, P3P2GN);
@@ -632,7 +632,7 @@ void sdppp(Path * StartDrak, Path* DrakPrincenza1GV, Path *DrakPrincenza2GV, Pat
 	}*/
 }
 
-void sgdppp(Path *StartGeneratorDrak, Path* DrakPrincenza1GZ, Path *DrakPrincenza2GZ, Path *DrakPrincenza3GZ, Path* P1P2GZ, Path *P1P3GZ, Path *P2P1GZ, Path* P2P3GZ, Path *P3P1GZ, Path *P3P2GZ, PathList* list)
+void sgdppp(Path* StartGeneratorDrak, Path* DrakPrincenza1GZ, Path* DrakPrincenza2GZ, Path* DrakPrincenza3GZ, Path* P1P2GZ, Path* P1P3GZ, Path* P2P1GZ, Path* P2P3GZ, Path* P3P1GZ, Path* P3P2GZ, PathList* list)
 {
 	updateList(list, 4, StartGeneratorDrak, DrakPrincenza1GZ, P1P2GZ, P2P3GZ);
 	updateList(list, 4, StartGeneratorDrak, DrakPrincenza1GZ, P1P3GZ, P3P2GZ);
@@ -644,7 +644,7 @@ void sgdppp(Path *StartGeneratorDrak, Path* DrakPrincenza1GZ, Path *DrakPrincenz
 	updateList(list, 4, StartGeneratorDrak, DrakPrincenza3GZ, P3P2GZ, P2P1GZ);
 }
 
-void sdgppp(Path* StartDrak, Path* DrakGenerator, Path* GeneratorPrincenza1, Path* GeneratorPrincenza2, Path* GeneratorPrincenza3, Path* P1P2GZ, Path *P1P3GZ, Path* P2P1GZ, Path* P2P3GZ, Path *P3P1GZ, Path* P3P2GZ, PathList* list)
+void sdgppp(Path* StartDrak, Path* DrakGenerator, Path* GeneratorPrincenza1, Path* GeneratorPrincenza2, Path* GeneratorPrincenza3, Path* P1P2GZ, Path* P1P3GZ, Path* P2P1GZ, Path* P2P3GZ, Path* P3P1GZ, Path* P3P2GZ, PathList* list)
 {
 	updateList(list, 5, StartDrak, DrakGenerator, GeneratorPrincenza1, P1P2GZ, P2P3GZ);
 	updateList(list, 5, StartDrak, DrakGenerator, GeneratorPrincenza1, P1P3GZ, P3P1GZ);
