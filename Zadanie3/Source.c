@@ -48,27 +48,21 @@ typedef struct queue
 
 #define newQueue() (Queue*)calloc(1, sizeof(Queue))
 
-void enqueue(Queue* queue, void* title)
+int enqueue(Queue* queue, void* title)
 {
-	if (!queue) exit(16);
-	//putchar('+');
+	if (!queue || !title) return FALSE;
 	if (queue->first)
 	{
-		//putchar('-');
-		if ((queue->last->next = (qValue*)malloc(sizeof(qValue))) == NULL)
-			exit(4);
+		if ((queue->last->next = (qValue*)malloc(sizeof(qValue))) == NULL) return FALSE;
 		queue->last = queue->last->next;
 	}
 	else
 	{
-		//putchar('*');
-		if ((queue->last = queue->first = (qValue*)malloc(sizeof(qValue))) == NULL)
-			exit(5);
+		if ((queue->last = queue->first = (qValue*)malloc(sizeof(qValue))) == NULL) return FALSE;
 	}
-	//putchar('/');
 	queue->last->value = title;
 	queue->last->next = NULL;
-	//putchar('.');
+	return TRUE;
 }
 
 /*void * dequeue(Queue* queue)
@@ -103,21 +97,19 @@ void pop(Queue* queue)
 
 int any(Queue* queue)
 {
-	return queue && (queue->first != NULL);
+	return queue && queue->first != NULL;
 }
 
 void clearQueue(Queue* queue)
 {
-	/*if(queue)
+	if (queue)
 	{
-		queue->first = NULL;
-		queue->last = NULL;
-	}*/
-	while (queue && queue->first)
-	{
-		qValue* temp = queue->first;
-		queue->first = queue->first->next;
-		free(temp);
+		while (queue->first)
+		{
+			qValue* temp = queue->first;
+			queue->first = queue->first->next;
+			free(temp);
+		}
 	}
 }
 
@@ -196,45 +188,37 @@ void clear(Title** dist, int n, int m)
 		dist[Generator.y][Generator.x].steps = -1;
 }
 
-QV* newQV(QV* back, int y, int x)
+QV* newQV(QV* back, int y, int x, int slowed)
 {
+	if (back == NULL) return NULL;
+
 	QV* new_qv;
-	if (back == NULL)
-		exit(2);
-	new_qv = malloc(sizeof(QV));
-	if (new_qv == NULL)
-		exit(1);
+	if ((new_qv = malloc(sizeof(QV))) == NULL) return NULL;
+
 	new_qv->back = (Point*)&back->point;
 	new_qv->point.y = y;
 	new_qv->point.x = x;
 	new_qv->generator = back->generator;
-	new_qv->slowed = 0;
+	new_qv->slowed = slowed;
+
 	return new_qv;
 }
 
-void UDLR(int n, int m, Queue* queue, QV* value, Point point)
+int UDLR(int n, int m, Queue* queue, QV* value, Point point)
 {
-	QV* new_value;
 	if (point.y - 1 >= 0)
-	{
-		new_value = newQV(value, point.y - 1, point.x);
-		enqueue(queue, new_value);
-	}
+		if (!enqueue(queue, newQV(value, point.y - 1, point.x, 0)))
+			return FALSE;
 	if (point.x - 1 >= 0)
-	{
-		new_value = newQV(value, point.y, point.x - 1);
-		enqueue(queue, new_value);
-	}
+		if (!enqueue(queue, newQV(value, point.y, point.x - 1, 0)))
+			return FALSE;
 	if (point.y + 1 < n)
-	{
-		new_value = newQV(value, point.y + 1, point.x);
-		enqueue(queue, new_value);
-	}
+		if (!enqueue(queue, newQV(value, point.y + 1, point.x, 0)))
+			return FALSE;
 	if (point.x + 1 < m)
-	{
-		new_value = newQV(value, point.y, point.x + 1);
-		enqueue(queue, new_value);
-	}
+		if (!enqueue(queue, newQV(value, point.y, point.x + 1, 0)))
+			return FALSE;
+	return TRUE;
 }
 
 #define STEPS(point) dist[point.y][point.x].steps
@@ -252,9 +236,9 @@ void updateDist(Title** dist, QV* value, int time)
 
 QV* newStart(Title** dist, int x, int y, int gen)
 {
-	QV* value = malloc(sizeof(QV));
-	if (value == NULL)
-		exit(3);
+	QV* value;
+	if ((value = malloc(sizeof(QV))) == NULL) return NULL;
+
 	value->point.x = x;
 	value->point.y = y;
 	value->back = &value->point;
@@ -265,26 +249,23 @@ QV* newStart(Title** dist, int x, int y, int gen)
 	return value;
 }
 
-void addToQueue(char** mapa, int n, int m, Teleport** teleporty, Queue* queue, QV* value)
+int addToQueue(char** mapa, int n, int m, Teleport** teleporty, Queue* queue, QV* value)
 {
 	if (value->generator && isTeleport(MAP(value->point)))
 	{
-		Teleport* teleport = (Teleport*)teleporty[MAP(value->point) - '0'];
+		Teleport* teleport = teleporty[MAP(value->point) - '0'];
 		while (teleport)
 		{
 			if (teleport->point.x != value->point.x || teleport->point.y != value->point.y)
-			{
-				QV* temp = newQV(value, teleport->point.y, teleport->point.x);
-				temp->slowed = -1;
-				enqueue(queue, temp);
-			}
+				if (!enqueue(queue, newQV(value, teleport->point.y, teleport->point.x, -1)))
+					return FALSE;
 			teleport = teleport->next;
 		}
 	}
-	UDLR(n, m, queue, value, value->point);
+	return UDLR(n, m, queue, value, value->point);
 }
 
-void dijkstra(char** mapa, int n, int m, Teleport** teleporty, Queue* queue, Title** dist, int maxTime)
+int dijkstra(char** mapa, int n, int m, Teleport** teleporty, Queue* queue, Title** dist, int maxTime)
 {
 	while (any(queue) && (STEPS(Drak) == -1 || STEPS(Princezna1) == -1 || STEPS(Princezna2) == -1 || STEPS(Princezna3) == -1 || (Generator.x == -1 || STEPS(Generator) == -1)))
 	{
@@ -294,43 +275,42 @@ void dijkstra(char** mapa, int n, int m, Teleport** teleporty, Queue* queue, Tit
 		if (MAP(value->point) == WALL)
 			continue;
 
-		int time;
-
-		time = _TIME(value->back);
+		int time = _TIME(value->back);
 		if (value->slowed != -1)
 		{
 			if (!value->slowed++ && MAP(value->point) == SLOW)
 			{
-				enqueue(queue, value);
+				if (!enqueue(queue, value))
+					return FALSE;
 				continue;
 			}
 
 			time += MAP(value->point) == SLOW ? 2 : 1;
 		}
+
 		if (time < 0 || time > maxTime)
 			continue;
 
 		if (time < TIME(value->point))
 		{
 			if (dist[value->point.y][value->point.x].time != INT_MAX)
-			{
 				continue;
-			}
 			updateDist(dist, value, time);
-			addToQueue(mapa, n, m, teleporty, queue, value);
+			if (!addToQueue(mapa, n, m, teleporty, queue, value))
+				return FALSE;
 		}
 	}
 	clearQueue(queue);
+	return TRUE;
 }
 
-void vytvorCestu(Point ciel, Title** dist, Path* pathBack)
+int vytvorCestu(Point ciel, Title** dist, Path* pathBack)
 {
 	if (STEPS(ciel) >= 0)
 	{
 		pathBack->steps = STEPS(ciel);
 		pathBack->time = TIME(ciel);
-		if ((pathBack->cesta = malloc(pathBack->steps * 2 * sizeof(int))) == NULL)
-			exit(6);
+		if ((pathBack->cesta = malloc(pathBack->steps * 2 * sizeof(int))) == NULL) return FALSE;
 		int index = pathBack->steps * 2;
 		Point* p = (Point*)&ciel;
 		while (index > 0)
@@ -340,9 +320,10 @@ void vytvorCestu(Point ciel, Title** dist, Path* pathBack)
 			p = dist[p->y][p->x].back;
 		}
 	}
+	return TRUE;
 }
 
-void vytvorStartDrak(int t, Point Drak, Point Generator, Title** dist, Title** distGen, Path* startDrak, Path* startGeneratorDrak)
+int vytvorStartDrak(int t, Point Drak, Point Generator, Title** dist, Title** distGen, Path* startDrak, Path* startGeneratorDrak)
 {
 	if (Generator.x != -1 && distGen[Drak.y][Drak.x].steps >= 0)
 	{
@@ -355,7 +336,7 @@ void vytvorStartDrak(int t, Point Drak, Point Generator, Title** dist, Title** d
 		}
 		else if (Generator.x != startX || Generator.y != startY)
 		{
-			return;
+			return TRUE;
 		}
 		else
 		{
@@ -366,8 +347,7 @@ void vytvorStartDrak(int t, Point Drak, Point Generator, Title** dist, Title** d
 		// Ak sa k Drakovi pomocou generatora nedostanes ani v case t nema zmysel si to pamatat
 		if (startGeneratorDrak->time <= t)
 		{
-			if ((startGeneratorDrak->cesta = malloc(startGeneratorDrak->steps * 2 * sizeof(int))) == NULL)
-				exit(7);
+			if ((startGeneratorDrak->cesta = malloc(startGeneratorDrak->steps * 2 * sizeof(int))) == NULL) return FALSE;
 			index = distGen[Drak.y][Drak.x].steps * 2;
 			Point* p = (Point*)&Drak;
 			while (index > 0)
@@ -396,8 +376,7 @@ void vytvorStartDrak(int t, Point Drak, Point Generator, Title** dist, Title** d
 			{
 				startDrak->steps = dist[Drak.y][Drak.x].steps;
 				startDrak->time = dist[Drak.y][Drak.x].time;
-				if ((startDrak->cesta = malloc(startDrak->steps * 2 * sizeof(int))) == NULL)
-					exit(8);
+				if ((startDrak->cesta = malloc(startDrak->steps * 2 * sizeof(int))) == NULL) return FALSE;
 				int index = STEPS(Drak) * 2;
 				Point* p = (Point*)&Drak;
 				while (index > 0)
@@ -412,6 +391,8 @@ void vytvorStartDrak(int t, Point Drak, Point Generator, Title** dist, Title** d
 		//else printf("# Nedokazem vcas dobehnut k drakovi bez pomoci generatora\n");
 	}
 	//else printf("# Nedokazem sa dostat k drakovi bez generatora\n");
+
+	return TRUE;
 }
 
 void vypisCestu(Path pathBack, char* cesta)
@@ -426,7 +407,7 @@ void vypisCestu(Path pathBack, char* cesta)
 	}
 }
 
-void updateList(PathList* list, int n_args, ...)
+int updateList(PathList* list, int n_args, ...)
 {
 	int i, time = 0, steps = 0;
 	va_list ap;
@@ -441,11 +422,10 @@ void updateList(PathList* list, int n_args, ...)
 		if (part->cesta == NULL)
 		{
 			va_end(ap);
-			return;
+			return TRUE;
 		}
 
-		if ((temp = malloc(sizeof(PathPart))) == NULL)
-			exit(9);
+		if ((temp = malloc(sizeof(PathPart))) == NULL) return FALSE;
 		temp->next = partList;
 		temp->part = part;
 		partList = temp;
@@ -456,7 +436,7 @@ void updateList(PathList* list, int n_args, ...)
 		if (time >= list->time)
 		{
 			va_end(ap);
-			return;
+			return TRUE;
 		}
 	}
 	va_end(ap);
@@ -474,20 +454,10 @@ void updateList(PathList* list, int n_args, ...)
 		list->parts = partList;
 	}
 
-	/*partList = NULL;
-	temp = NULL;
-	part = NULL;
-
-	printf("Function Updateing struct (variable arguments)\n");
-	temp = list->parts;
-	while (temp)
-	{
-	printf("# pointer: %p | count of values: %d | first value: [%d:%d]\n", temp->part, temp->part->steps, temp->part->cesta[0], temp->part->cesta[1]);
-	temp = temp->next;
-	}*/
+	return TRUE;
 }
 
-void InitRescue(char** mapa, int n, int m, Teleport** teleporty)
+int InitRescue(char** mapa, int n, int m, Teleport** teleporty)
 {
 	int x, y, temp = 1;
 
@@ -538,9 +508,8 @@ void InitRescue(char** mapa, int n, int m, Teleport** teleporty)
 			else if (isTeleport(mapa[y][x]))
 			{
 				int index = mapa[y][x] - '0';
-				Teleport* teleport = malloc(sizeof(Teleport));
-				if (teleport == NULL)
-					exit(10);
+				Teleport* teleport;
+				if ((teleport = malloc(sizeof(Teleport))) == NULL) return FALSE;
 				teleport->next = teleporty[index];
 				teleport->point.x = x;
 				teleport->point.y = y;
@@ -548,6 +517,7 @@ void InitRescue(char** mapa, int n, int m, Teleport** teleporty)
 			}
 		}
 	}
+	return TRUE;
 }
 
 void fasterfrom2(Point point1, Point point2, Path* path1, Path* path2, Title** dist)
@@ -592,72 +562,83 @@ void fasterfrom3(Point point1, Point point2, Point point3, Path* path1, Path* pa
 		fasterfrom2(point2, point3, path2, path3, dist);
 }
 
-void sdppp(PathList* list)
+int sdppp(PathList* list)
 {
-	updateList(list, 4, &StartDrak, &DrakPrincenza1GV, &P1P2GN, &P2P3GN);
-	updateList(list, 4, &StartDrak, &DrakPrincenza1GV, &P1P3GN, &P3P2GN);
+	return !(
+		!updateList(list, 4, &StartDrak, &DrakPrincenza1GV, &P1P2GN, &P2P3GN) ||
+		!updateList(list, 4, &StartDrak, &DrakPrincenza1GV, &P1P3GN, &P3P2GN) ||
 
-	updateList(list, 4, &StartDrak, &DrakPrincenza2GV, &P2P1GN, &P1P3GN);
-	updateList(list, 4, &StartDrak, &DrakPrincenza2GV, &P2P3GN, &P3P1GN);
+		!updateList(list, 4, &StartDrak, &DrakPrincenza2GV, &P2P1GN, &P1P3GN) ||
+		!updateList(list, 4, &StartDrak, &DrakPrincenza2GV, &P2P3GN, &P3P1GN) ||
 
-	updateList(list, 4, &StartDrak, &DrakPrincenza3GV, &P3P1GN, &P1P2GN);
-	updateList(list, 4, &StartDrak, &DrakPrincenza3GV, &P3P2GN, &P2P1GN);
+		!updateList(list, 4, &StartDrak, &DrakPrincenza3GV, &P3P1GN, &P1P2GN) ||
+		!updateList(list, 4, &StartDrak, &DrakPrincenza3GV, &P3P2GN, &P2P1GN)
+	);
 }
 
-void sgdppp(PathList* list)
+int sgdppp(PathList* list)
 {
-	updateList(list, 4, &StartGeneratorDrak, &DrakPrincenza1GZ, &P1P2GZ, &P2P3GZ);
-	updateList(list, 4, &StartGeneratorDrak, &DrakPrincenza1GZ, &P1P3GZ, &P3P2GZ);
+	return !(
+		!updateList(list, 4, &StartGeneratorDrak, &DrakPrincenza1GZ, &P1P2GZ, &P2P3GZ) ||
+		!updateList(list, 4, &StartGeneratorDrak, &DrakPrincenza1GZ, &P1P3GZ, &P3P2GZ) ||
 
-	updateList(list, 4, &StartGeneratorDrak, &DrakPrincenza2GZ, &P2P1GZ, &P1P3GZ);
-	updateList(list, 4, &StartGeneratorDrak, &DrakPrincenza2GZ, &P2P3GZ, &P3P1GZ);
+		!updateList(list, 4, &StartGeneratorDrak, &DrakPrincenza2GZ, &P2P1GZ, &P1P3GZ) ||
+		!updateList(list, 4, &StartGeneratorDrak, &DrakPrincenza2GZ, &P2P3GZ, &P3P1GZ) ||
 
-	updateList(list, 4, &StartGeneratorDrak, &DrakPrincenza3GZ, &P3P1GZ, &P1P2GZ);
-	updateList(list, 4, &StartGeneratorDrak, &DrakPrincenza3GZ, &P3P2GZ, &P2P1GZ);
+		!updateList(list, 4, &StartGeneratorDrak, &DrakPrincenza3GZ, &P3P1GZ, &P1P2GZ) ||
+		!updateList(list, 4, &StartGeneratorDrak, &DrakPrincenza3GZ, &P3P2GZ, &P2P1GZ)
+	);
 }
 
-void sdgppp(PathList* list)
+int sdgppp(PathList* list)
 {
-	updateList(list, 5, &StartDrak, &DrakGenerator, &GeneratorPrincenza1, &P1P2GZ, &P2P3GZ);
-	updateList(list, 5, &StartDrak, &DrakGenerator, &GeneratorPrincenza1, &P1P3GZ, &P3P1GZ);
+	return !(
+		!updateList(list, 5, &StartDrak, &DrakGenerator, &GeneratorPrincenza1, &P1P2GZ, &P2P3GZ) ||
+		!updateList(list, 5, &StartDrak, &DrakGenerator, &GeneratorPrincenza1, &P1P3GZ, &P3P1GZ) ||
 
-	updateList(list, 5, &StartDrak, &DrakGenerator, &GeneratorPrincenza2, &P2P1GZ, &P1P3GZ);
-	updateList(list, 5, &StartDrak, &DrakGenerator, &GeneratorPrincenza2, &P2P3GZ, &P3P1GZ);
+		!updateList(list, 5, &StartDrak, &DrakGenerator, &GeneratorPrincenza2, &P2P1GZ, &P1P3GZ) ||
+		!updateList(list, 5, &StartDrak, &DrakGenerator, &GeneratorPrincenza2, &P2P3GZ, &P3P1GZ) ||
 
-	updateList(list, 5, &StartDrak, &DrakGenerator, &GeneratorPrincenza3, &P3P1GZ, &P1P2GZ);
-	updateList(list, 5, &StartDrak, &DrakGenerator, &GeneratorPrincenza3, &P3P2GZ, &P2P1GZ);
+		!updateList(list, 5, &StartDrak, &DrakGenerator, &GeneratorPrincenza3, &P3P1GZ, &P1P2GZ) ||
+		!updateList(list, 5, &StartDrak, &DrakGenerator, &GeneratorPrincenza3, &P3P2GZ, &P2P1GZ)
+	);
 }
 
-void sdpgpp(PathList* list)
+int sdpgpp(PathList* list)
 {
-	updateList(list, 5, &StartDrak, &DrakPrincenza1GV, &P1G, &GeneratorPrincenza2, &P2P3GZ);
-	updateList(list, 5, &StartDrak, &DrakPrincenza1GV, &P1G, &GeneratorPrincenza3, &P3P2GZ);
+	return !(
+		!updateList(list, 5, &StartDrak, &DrakPrincenza1GV, &P1G, &GeneratorPrincenza2, &P2P3GZ) ||
+		!updateList(list, 5, &StartDrak, &DrakPrincenza1GV, &P1G, &GeneratorPrincenza3, &P3P2GZ) ||
 
-	updateList(list, 5, &StartDrak, &DrakPrincenza2GV, &P2G, &GeneratorPrincenza1, &P1P3GZ);
-	updateList(list, 5, &StartDrak, &DrakPrincenza2GV, &P2G, &GeneratorPrincenza3, &P3P1GZ);
+		!updateList(list, 5, &StartDrak, &DrakPrincenza2GV, &P2G, &GeneratorPrincenza1, &P1P3GZ) ||
+		!updateList(list, 5, &StartDrak, &DrakPrincenza2GV, &P2G, &GeneratorPrincenza3, &P3P1GZ) ||
 
-	updateList(list, 5, &StartDrak, &DrakPrincenza3GV, &P3G, &GeneratorPrincenza1, &P1P2GZ);
-	updateList(list, 5, &StartDrak, &DrakPrincenza3GV, &P3G, &GeneratorPrincenza2, &P2P1GZ);
+		!updateList(list, 5, &StartDrak, &DrakPrincenza3GV, &P3G, &GeneratorPrincenza1, &P1P2GZ) ||
+		!updateList(list, 5, &StartDrak, &DrakPrincenza3GV, &P3G, &GeneratorPrincenza2, &P2P1GZ)
+	);
 }
 
-void sdppgp(PathList* list)
+int sdppgp(PathList* list)
 {
-	updateList(list, 5, &StartDrak, &DrakPrincenza1GV, &P1P2GN, &P2G, &GeneratorPrincenza3);
-	updateList(list, 5, &StartDrak, &DrakPrincenza1GV, &P1P3GN, &P3G, &GeneratorPrincenza2);
+	return !(
+		!updateList(list, 5, &StartDrak, &DrakPrincenza1GV, &P1P2GN, &P2G, &GeneratorPrincenza3) ||
+		!updateList(list, 5, &StartDrak, &DrakPrincenza1GV, &P1P3GN, &P3G, &GeneratorPrincenza2) ||
 
-	updateList(list, 5, &StartDrak, &DrakPrincenza2GV, &P2P1GN, &P1G, &GeneratorPrincenza3);
-	updateList(list, 5, &StartDrak, &DrakPrincenza2GV, &P2P3GN, &P3G, &GeneratorPrincenza1);
+		!updateList(list, 5, &StartDrak, &DrakPrincenza2GV, &P2P1GN, &P1G, &GeneratorPrincenza3) ||
+		!updateList(list, 5, &StartDrak, &DrakPrincenza2GV, &P2P3GN, &P3G, &GeneratorPrincenza1) ||
 
-	updateList(list, 5, &StartDrak, &DrakPrincenza3GV, &P3P1GN, &P1G, &GeneratorPrincenza2);
-	updateList(list, 5, &StartDrak, &DrakPrincenza3GV, &P3P2GN, &P2G, &GeneratorPrincenza1);
+		!updateList(list, 5, &StartDrak, &DrakPrincenza3GV, &P3P1GN, &P1G, &GeneratorPrincenza2) ||
+		!updateList(list, 5, &StartDrak, &DrakPrincenza3GV, &P3P2GN, &P2G, &GeneratorPrincenza1)
+	);
 }
 
-void startSearch(char** mapa, int n, int m, Teleport** teleporty, Point startPoint, int gStatus, Queue* queue, Title** dist, int t)
+int startSearch(char** mapa, int n, int m, Teleport** teleporty, Point startPoint, int gStatus, Queue* queue, Title** dist, int t)
 {
 	clear(dist, n, m);
-	QV* start = newStart(dist, startPoint.x, startPoint.y, gStatus);
-	UDLR(n, m, queue, start, start->point);
-	dijkstra(mapa, n, m, teleporty, queue, dist, t);
+	QV* start;
+	if ((start = newStart(dist, startPoint.x, startPoint.y, gStatus)) == NULL) return FALSE;
+	if (!UDLR(n, m, queue, start, start->point)) return FALSE;
+	return dijkstra(mapa, n, m, teleporty, queue, dist, t);
 }
 
 void VypisCesty()
@@ -701,33 +682,36 @@ int* result = NULL;
 
 int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 {
+	*dlzka_cesty = 0;
+
 #ifdef _MSC_VER
 #pragma region Init
 #endif
-	int i;
-	Teleport** teleporty = calloc(10, sizeof(Teleport*));
-	if (teleporty == NULL) exit(17);
 	Generator.x = -1;
+	Teleport** teleporty;
+	if ((teleporty = calloc(10, sizeof(Teleport*))) == NULL) return NULL;
 
 	// Zisti suradnice
-	InitRescue(mapa, n, m, teleporty);
+	if (!InitRescue(mapa, n, m, teleporty)) return NULL;
 	//printf("# InitRescue ... OK\n");
 
 	//int k;
 	//for (k = 0; k < n; k++)
 	//	printf("%.*s\n", m, mapa[k]);
 
+	int i;
 	QV* start;
-	Queue* queue = newQueue();
+	Queue* queue;
+	Title** dist;
+	Title** distGen;
 
-	Title** dist = malloc(n * sizeof(Title*));
-	if (dist == NULL) exit(11);
-	Title** distGen = malloc(n * sizeof(Title*));
-	if (distGen == NULL) exit(12);
+	if ((queue = newQueue()) == NULL) return NULL;
+	if ((dist = malloc(n * sizeof(Title*))) == NULL) return NULL;
+	if ((distGen = malloc(n * sizeof(Title*))) == NULL) return NULL;
 	for (i = 0; i < n; i++)
 	{
-		if ((dist[i] = malloc(m * sizeof(Title))) == NULL) exit(13);
-		if ((distGen[i] = malloc(m * sizeof(Title))) == NULL) exit(14);
+		if ((dist[i] = malloc(m * sizeof(Title))) == NULL) return NULL;
+		if ((distGen[i] = malloc(m * sizeof(Title))) == NULL) return NULL;
 	}
 #ifdef _MSC_VER
 #pragma endregion
@@ -736,78 +720,75 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 
 	// ReSharper disable CppLocalVariableMightNotBeInitialized
 	clear(dist, n, m);
-	//printf("# Clear ... OK\n");
-	start = newStart(dist, startX, startY, mapa[startY][startX] == GENE);
-	//printf("# newStart ... OK\n");
-	UDLR(n, m, queue, start, start->point);
-	//printf("# UDLR ... OK\n");
-	dijkstra(mapa, n, m, teleporty, queue, dist, t);
+	if ((start = newStart(dist, startX, startY, mapa[startY][startX] == GENE)) == NULL) return NULL;
+	if (!UDLR(n, m, queue, start, start->point)) return NULL;
+	if (!dijkstra(mapa, n, m, teleporty, queue, dist, t)) return NULL;
 	//printf("# Dist 1 ... OK\n");
 
 	if (Generator.x != -1)
 	{
-		startSearch(mapa, n, m, teleporty, Generator, ON, queue, distGen, t);
+		if (!startSearch(mapa, n, m, teleporty, Generator, ON, queue, distGen, t)) return NULL;
 		//fasterfrom3(Princezna1, Princezna2, Princezna3, &GeneratorPrincenza1, &GeneratorPrincenza2, &GeneratorPrincenza3, distGen);
-		vytvorCestu(Princezna1, distGen, &GeneratorPrincenza1);
-		vytvorCestu(Princezna2, distGen, &GeneratorPrincenza2);
-		vytvorCestu(Princezna3, distGen, &GeneratorPrincenza3);
+		if (!vytvorCestu(Princezna1, distGen, &GeneratorPrincenza1)) return NULL;
+		if (!vytvorCestu(Princezna2, distGen, &GeneratorPrincenza2)) return NULL;
+		if (!vytvorCestu(Princezna3, distGen, &GeneratorPrincenza3)) return NULL;
 	}
 	//printf("# Dist 2 ... OK\n");
-	vytvorStartDrak(t, Drak, Generator, dist, distGen, &StartDrak, &StartGeneratorDrak);
+	if (!vytvorStartDrak(t, Drak, Generator, dist, distGen, &StartDrak, &StartGeneratorDrak)) return NULL;
 	printf("# Start ... OK\n");
 	// PrincezneGeneratorOn
 	if (Generator.x != -1)
 	{
-		startSearch(mapa, n, m, teleporty, Princezna1, ON, queue, dist, INT_MAX);
+		if (!startSearch(mapa, n, m, teleporty, Princezna1, ON, queue, dist, INT_MAX)) return NULL;
 		//fasterfrom2(Princezna2, Princezna3, &P1P2GZ, &P1P3GZ, dist);
-		vytvorCestu(Princezna2, dist, &P1P2GZ);
-		vytvorCestu(Princezna3, dist, &P1P3GZ);
+		if (!vytvorCestu(Princezna2, dist, &P1P2GZ)) return NULL;
+		if (!vytvorCestu(Princezna3, dist, &P1P3GZ)) return NULL;
 
-		startSearch(mapa, n, m, teleporty, Princezna2, ON, queue, dist, INT_MAX);
+		if (!startSearch(mapa, n, m, teleporty, Princezna2, ON, queue, dist, INT_MAX)) return NULL;
 		//fasterfrom2(Princezna1, Princezna3, &P2P1GZ, &P2P3GZ, dist);
-		vytvorCestu(Princezna1, dist, &P2P1GZ);
-		vytvorCestu(Princezna3, dist, &P2P3GZ);
+		if (!vytvorCestu(Princezna1, dist, &P2P1GZ)) return NULL;
+		if (!vytvorCestu(Princezna3, dist, &P2P3GZ)) return NULL;
 
-		startSearch(mapa, n, m, teleporty, Princezna3, ON, queue, dist, INT_MAX);
+		if (!startSearch(mapa, n, m, teleporty, Princezna3, ON, queue, dist, INT_MAX)) return NULL;
 		//fasterfrom2(Princezna1, Princezna2, &P3P1GZ, &P3P2GZ, dist);
-		vytvorCestu(Princezna1, dist, &P3P1GZ);
-		vytvorCestu(Princezna2, dist, &P3P2GZ);
+		if (!vytvorCestu(Princezna1, dist, &P3P1GZ)) return NULL;
+		if (!vytvorCestu(Princezna2, dist, &P3P2GZ)) return NULL;
 
-		startSearch(mapa, n, m, teleporty, Drak, ON, queue, dist, INT_MAX);
+		if (!startSearch(mapa, n, m, teleporty, Drak, ON, queue, dist, INT_MAX)) return NULL;
 		//fasterfrom3(Princezna1, Princezna2, Princezna3, &DrakPrincenza1GZ, &DrakPrincenza2GZ, &DrakPrincenza3GZ, dist);
-		vytvorCestu(Princezna1, dist, &DrakPrincenza1GZ);
-		vytvorCestu(Princezna2, dist, &DrakPrincenza2GZ);
-		vytvorCestu(Princezna3, dist, &DrakPrincenza3GZ);
+		if (!vytvorCestu(Princezna1, dist, &DrakPrincenza1GZ)) return NULL;
+		if (!vytvorCestu(Princezna2, dist, &DrakPrincenza2GZ)) return NULL;
+		if (!vytvorCestu(Princezna3, dist, &DrakPrincenza3GZ)) return NULL;
 	}
 	printf("# PrincezneGeneratorOn ... OK\n");
 
 	if (StartDrak.cesta) // Cesta k drakovi bez generatora
 	{
 		// Drak->Princezne bez generatora
-		startSearch(mapa, n, m, teleporty, Drak, OFF, queue, dist, INT_MAX);
-		vytvorCestu(Princezna1, dist, &DrakPrincenza1GV);
-		vytvorCestu(Princezna2, dist, &DrakPrincenza2GV);
-		vytvorCestu(Princezna3, dist, &DrakPrincenza3GV);
+		if (!startSearch(mapa, n, m, teleporty, Drak, OFF, queue, dist, INT_MAX)) return NULL;
+		if (!vytvorCestu(Princezna1, dist, &DrakPrincenza1GV)) return NULL;
+		if (!vytvorCestu(Princezna2, dist, &DrakPrincenza2GV)) return NULL;
+		if (!vytvorCestu(Princezna3, dist, &DrakPrincenza3GV)) return NULL;
 		if (Generator.x != -1)
-			vytvorCestu(Generator, dist, &DrakGenerator);
+			if (!vytvorCestu(Generator, dist, &DrakGenerator)) return NULL;
 
-		startSearch(mapa, n, m, teleporty, Princezna1, OFF, queue, dist, INT_MAX);
-		vytvorCestu(Princezna2, dist, &P1P2GN);
-		vytvorCestu(Princezna3, dist, &P1P3GN);
+		if (!startSearch(mapa, n, m, teleporty, Princezna1, OFF, queue, dist, INT_MAX)) return NULL;
+		if (!vytvorCestu(Princezna2, dist, &P1P2GN)) return NULL;
+		if (!vytvorCestu(Princezna3, dist, &P1P3GN)) return NULL;
 		if (Generator.x != -1)
-			vytvorCestu(Generator, dist, &P1G);
+			if (!vytvorCestu(Generator, dist, &P1G)) return NULL;
 
-		startSearch(mapa, n, m, teleporty, Princezna2, OFF, queue, dist, INT_MAX);
-		vytvorCestu(Princezna1, dist, &P2P1GN);
-		vytvorCestu(Princezna3, dist, &P2P3GN);
+		if (!startSearch(mapa, n, m, teleporty, Princezna2, OFF, queue, dist, INT_MAX)) return NULL;
+		if (!vytvorCestu(Princezna1, dist, &P2P1GN)) return NULL;
+		if (!vytvorCestu(Princezna3, dist, &P2P3GN)) return NULL;
 		if (Generator.x != -1)
-			vytvorCestu(Generator, dist, &P2G);
+			if (!vytvorCestu(Generator, dist, &P2G)) return NULL;
 
-		startSearch(mapa, n, m, teleporty, Princezna3, OFF, queue, dist, INT_MAX);
-		vytvorCestu(Princezna1, dist, &P3P1GN);
-		vytvorCestu(Princezna2, dist, &P3P2GN);
+		if (!startSearch(mapa, n, m, teleporty, Princezna3, OFF, queue, dist, INT_MAX)) return NULL;
+		if (!vytvorCestu(Princezna1, dist, &P3P1GN)) return NULL;
+		if (!vytvorCestu(Princezna2, dist, &P3P2GN)) return NULL;
 		if (Generator.x != -1)
-			vytvorCestu(Generator, dist, &P3G);
+			if (!vytvorCestu(Generator, dist, &P3G)) return NULL;
 	}
 	// ReSharper restore CppLocalVariableMightNotBeInitialized
 
@@ -834,25 +815,25 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 
 	// Start->Generator->Drak->Princezna->Princezna->Princezna
 	if (StartGeneratorDrak.cesta)
-		sgdppp(&list);
+		if (!sgdppp(&list)) return NULL;
 
 	// Start->Drak->...
 	if (StartDrak.cesta)
 	{
 		// Start->Drak->Generator->Princezna->Princezna->Princezna
 		if (DrakGenerator.cesta)
-			sdgppp(&list);
+			if (!sdgppp(&list)) return NULL;
 
 		// Start->Drak->Princezna->Princezna->Princezna
-		sdppp(&list);
+		if (!sdppp(&list)) return NULL;
 
 		if (Generator.x != -1)
 		{
 			// Start->Drak->Princezna->Generator->Princezna->Princezna
-			sdpgpp(&list);
+			if (!sdpgpp(&list)) return NULL;
 
 			// Start->Drak->Princezna->Princezna->Generator->Princezna
-			sdppgp(&list);
+			if (!sdppgp(&list)) return NULL;
 		}
 	}
 	printf("# Search ... OK\n");
@@ -862,8 +843,7 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 	if (list.parts)
 	{
 		*dlzka_cesty = list.steps + 1;
-		if ((result = malloc(list.steps * 2 * sizeof(int))) == NULL)
-			exit(15);
+		if ((result = malloc(list.steps * 2 * sizeof(int))) == NULL) return NULL;
 
 		PathPart* part = list.parts;
 		int offset = *dlzka_cesty * 2;
@@ -892,7 +872,6 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 	else
 	{
 		result = NULL;
-		*dlzka_cesty = 0;
 	}
 	printf("# Result ... OK\n");
 
