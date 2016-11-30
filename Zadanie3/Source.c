@@ -50,19 +50,25 @@ typedef struct queue
 
 void enqueue(Queue* queue, void* title)
 {
+	if (!queue) exit(16);
+	//putchar('+');
 	if (queue->first)
 	{
+		//putchar('-');
 		if ((queue->last->next = (qValue*)malloc(sizeof(qValue))) == NULL)
 			exit(4);
 		queue->last = queue->last->next;
 	}
 	else
 	{
+		//putchar('*');
 		if ((queue->last = queue->first = (qValue*)malloc(sizeof(qValue))) == NULL)
 			exit(5);
 	}
+	//putchar('/');
 	queue->last->value = title;
 	queue->last->next = NULL;
+	//putchar('.');
 }
 
 /*void * dequeue(Queue* queue)
@@ -80,14 +86,14 @@ return NULL;
 
 void* top(Queue* queue)
 {
-	if (queue->first)
+	if (queue && queue->first)
 		return queue->first->value;
 	return NULL;
 }
 
 void pop(Queue* queue)
 {
-	if (queue->first)
+	if (queue && queue->first)
 	{
 		qValue* temp = queue->first;
 		queue->first = queue->first->next;
@@ -97,12 +103,17 @@ void pop(Queue* queue)
 
 int any(Queue* queue)
 {
-	return queue->first != NULL;
+	return queue && (queue->first != NULL);
 }
 
 void clearQueue(Queue* queue)
 {
-	while (queue->first)
+	/*if(queue)
+	{
+		queue->first = NULL;
+		queue->last = NULL;
+	}*/
+	while (queue && queue->first)
 	{
 		qValue* temp = queue->first;
 		queue->first = queue->first->next;
@@ -174,14 +185,8 @@ void clear(Title** dist, int n, int m)
 {
 	int x, y;
 	for (y = 0; y < n; y++)
-	{
 		for (x = 0; x < m; x++)
-		{
 			dist[y][x].time = INT_MAX;
-			//dist[y][x].back = NULL;
-			//dist[y][x].steps = -1;
-		}
-	}
 
 	dist[Drak.y][Drak.x].steps = -1;
 	dist[Princezna1.y][Princezna1.x].steps = -1;
@@ -193,9 +198,10 @@ void clear(Title** dist, int n, int m)
 
 QV* newQV(QV* back, int y, int x)
 {
+	QV* new_qv;
 	if (back == NULL)
 		exit(2);
-	QV* new_qv = malloc(sizeof(QV));
+	new_qv = malloc(sizeof(QV));
 	if (new_qv == NULL)
 		exit(1);
 	new_qv->back = (Point*)&back->point;
@@ -208,38 +214,34 @@ QV* newQV(QV* back, int y, int x)
 
 void UDLR(int n, int m, Queue* queue, QV* value, Point point)
 {
-	//if (n == 11)
-	//	printf("# UDLR A ... OK\n");
+	QV* new_value;
 	if (point.y - 1 >= 0)
-		enqueue(queue, newQV(value, point.y - 1, point.x));
-	//if (n == 11)
-	//	printf("# UDLR B ... OK\n");
+	{
+		new_value = newQV(value, point.y - 1, point.x);
+		enqueue(queue, new_value);
+	}
 	if (point.x - 1 >= 0)
-		enqueue(queue, newQV(value, point.y, point.x - 1));
-	//if (n == 11)
-	//	printf("# UDLR C ... OK\n");
+	{
+		new_value = newQV(value, point.y, point.x - 1);
+		enqueue(queue, new_value);
+	}
 	if (point.y + 1 < n)
-		enqueue(queue, newQV(value, point.y + 1, point.x));
-	//if (n == 11)
-	//	printf("# UDLR D ... OK\n");
+	{
+		new_value = newQV(value, point.y + 1, point.x);
+		enqueue(queue, new_value);
+	}
 	if (point.x + 1 < m)
-		enqueue(queue, newQV(value, point.y, point.x + 1));
-	//if (n == 11)
-	//	printf("# UDLR E ... OK\n");
-}
-
-char myexit()
-{
-	exit(42);
-	return '\0';
+	{
+		new_value = newQV(value, point.y, point.x + 1);
+		enqueue(queue, new_value);
+	}
 }
 
 #define STEPS(point) dist[point.y][point.x].steps
 #define TIME(point) dist[point.y][point.x].time
-#define MAP(point) (point.y < 0 || point.y >= n || point.x < 0 || point.x >= m) ? myexit() : mapa[point.y][point.x]
+#define MAP(point) mapa[point.y][point.x]
 #define _STEPS(point) dist[point->y][point->x].steps
 #define _TIME(point) dist[point->y][point->x].time
-//#define _MAP(point) mapa[point->y][point->x]
 
 void updateDist(Title** dist, QV* value, int time)
 {
@@ -267,12 +269,9 @@ void addToQueue(char** mapa, int n, int m, Teleport** teleporty, Queue* queue, Q
 {
 	if (value->generator && isTeleport(MAP(value->point)))
 	{
-		//if (n == 11)
-		//	printf("# if A ... OK\n");
 		Teleport* teleport = (Teleport*)teleporty[MAP(value->point) - '0'];
 		while (teleport)
 		{
-			//UDLR(n, m, queue, value, teleport->point);
 			if (teleport->point.x != value->point.x || teleport->point.y != value->point.y)
 			{
 				QV* temp = newQV(value, teleport->point.y, teleport->point.x);
@@ -281,47 +280,19 @@ void addToQueue(char** mapa, int n, int m, Teleport** teleporty, Queue* queue, Q
 			}
 			teleport = teleport->next;
 		}
-		//if (n == 11)
-		//	printf("# if B ... OK\n");
 	}
-	//else
-	{
-		//if (n == 11)
-		//	printf("# else A ... OK\n");
-		UDLR(n, m, queue, value, value->point);
-		//if (n == 11)
-		//	printf("# else B ... OK\n");
-	}
+	UDLR(n, m, queue, value, value->point);
 }
 
 void dijkstra(char** mapa, int n, int m, Teleport** teleporty, Queue* queue, Title** dist, int maxTime)
 {
-	printf("# point1 in dijkstra ... %d\n", any(queue));
-	printf("# point1 in dijkstra ... %d\n", STEPS(Princezna1) == -1);
-	printf("# point2 in dijkstra ... %d\n", STEPS(Princezna2) == -1);
-	printf("# point3 in dijkstra ... %d\n", STEPS(Princezna3) == -1);
-	printf("# point4 in dijkstra ... %d\n", STEPS(Drak) == -1);
-	printf("# gp in dijkstra ... %d\n", STEPS(Generator) == -1);
-
 	while (any(queue) && (STEPS(Drak) == -1 || STEPS(Princezna1) == -1 || STEPS(Princezna2) == -1 || STEPS(Princezna3) == -1 || (Generator.x == -1 || STEPS(Generator) == -1)))
 	{
-		if (n == 7)
-			printf("# test A1 in dijkstra ... OK\n");
-
 		QV* value = top(queue);
 		pop(queue);
 
-		if (n == 7)
-			printf("# test A2 in dijkstra ... OK\n");
-
 		if (MAP(value->point) == WALL)
-		{
-			if (n == 7)
-				printf("# test B1 in dijkstra ... OK\n");
 			continue;
-		}
-		if (n == 7)
-			printf("# test B1 in dijkstra ... OK\n");
 
 		int time;
 
@@ -331,23 +302,13 @@ void dijkstra(char** mapa, int n, int m, Teleport** teleporty, Queue* queue, Tit
 			if (!value->slowed++ && MAP(value->point) == SLOW)
 			{
 				enqueue(queue, value);
-				if (n == 7)
-					printf("# test B2 in dijkstra ... OK\n");
 				continue;
 			}
 
 			time += MAP(value->point) == SLOW ? 2 : 1;
 		}
-		if (n == 7)
-			printf("# test B2 in dijkstra ... OK\n");
 		if (time < 0 || time > maxTime)
-		{
-			if (n == 7)
-				printf("# test B3 in dijkstra ... OK\n");
 			continue;
-		}
-		if (n == 7)
-			printf("# test B3 in dijkstra ... OK\n");
 
 		if (time < TIME(value->point))
 		{
@@ -356,20 +317,10 @@ void dijkstra(char** mapa, int n, int m, Teleport** teleporty, Queue* queue, Tit
 				continue;
 			}
 			updateDist(dist, value, time);
-			if (n == 7)
-				printf("# test C in dijkstra ... OK\n");
 			addToQueue(mapa, n, m, teleporty, queue, value);
-			if (n == 7)
-				printf("# test D in dijkstra ... OK\n");
 		}
-		if (n == 7)
-			printf("# test B4 in dijkstra ... OK\n");
 	}
-	if (n == 7)
-		printf("# loop in dijkstra ... OK\n");
 	clearQueue(queue);
-	if (n == 7)
-		printf("# clearqueue in dijkstra ... OK\n");
 }
 
 void vytvorCestu(Point ciel, Title** dist, Path* pathBack)
@@ -514,14 +465,12 @@ void updateList(PathList* list, int n_args, ...)
 	{
 		list->time = time;
 		list->steps = steps;
-		/*PathPart* temp2;
-		temp = list->parts;
-		while (temp)
+		while (list->parts)
 		{
-			temp2 = temp;
-			temp = temp->next;
-			free(temp2);
-		}*/
+			temp = list->parts;
+			list->parts = temp->next;
+			free(temp);
+		}
 		list->parts = partList;
 	}
 
@@ -653,14 +602,6 @@ void sdppp(PathList* list)
 
 	updateList(list, 4, &StartDrak, &DrakPrincenza3GV, &P3P1GN, &P1P2GN);
 	updateList(list, 4, &StartDrak, &DrakPrincenza3GV, &P3P2GN, &P2P1GN);
-
-	/*printf("Function calling set of Updates\n");
-	PathPart* temp = list->parts;
-	while (temp)
-	{
-	printf("# pointer: %p | count of values: %d | first value: [%d:%d]\n", temp->part, temp->part->steps, temp->part->cesta[0], temp->part->cesta[1]);
-	temp = temp->next;
-	}*/
 }
 
 void sgdppp(PathList* list)
@@ -714,13 +655,9 @@ void sdppgp(PathList* list)
 void startSearch(char** mapa, int n, int m, Teleport** teleporty, Point startPoint, int gStatus, Queue* queue, Title** dist, int t)
 {
 	clear(dist, n, m);
-	//printf("# clear in Search ... OK\n");
 	QV* start = newStart(dist, startPoint.x, startPoint.y, gStatus);
-	//printf("# newStart in Search ... OK\n");
 	UDLR(n, m, queue, start, start->point);
-	//printf("# UDLR in Search ... OK\n");
 	dijkstra(mapa, n, m, teleporty, queue, dist, t);
-	//printf("# dijkstra in Search ... OK\n");
 }
 
 void VypisCesty()
@@ -760,6 +697,8 @@ void VypisCesty()
 	vypisCestu(P3G, TOSTRING(P3G));
 }
 
+int* result = NULL;
+
 int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 {
 #ifdef _MSC_VER
@@ -767,7 +706,7 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 #endif
 	int i;
 	Teleport** teleporty = calloc(10, sizeof(Teleport*));
-	/*Drak.x = Princezna1.x = Princezna2.x = Princezna3.x =*/
+	if (teleporty == NULL) exit(17);
 	Generator.x = -1;
 
 	// Zisti suradnice
@@ -803,7 +742,7 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 	UDLR(n, m, queue, start, start->point);
 	//printf("# UDLR ... OK\n");
 	dijkstra(mapa, n, m, teleporty, queue, dist, t);
-	printf("# Dist 1 ... OK\n");
+	//printf("# Dist 1 ... OK\n");
 
 	if (Generator.x != -1)
 	{
@@ -813,7 +752,7 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 		vytvorCestu(Princezna2, distGen, &GeneratorPrincenza2);
 		vytvorCestu(Princezna3, distGen, &GeneratorPrincenza3);
 	}
-	printf("# Dist 2 ... OK\n");
+	//printf("# Dist 2 ... OK\n");
 	vytvorStartDrak(t, Drak, Generator, dist, distGen, &StartDrak, &StartGeneratorDrak);
 	printf("# Start ... OK\n");
 	// PrincezneGeneratorOn
@@ -846,38 +785,29 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 	{
 		// Drak->Princezne bez generatora
 		startSearch(mapa, n, m, teleporty, Drak, OFF, queue, dist, INT_MAX);
-		//printf("# NoGenerator 1 Search ... OK\n");
 		vytvorCestu(Princezna1, dist, &DrakPrincenza1GV);
-		//printf("# NoGenerator 1 Create 1 ... OK\n");
 		vytvorCestu(Princezna2, dist, &DrakPrincenza2GV);
-		//printf("# NoGenerator 1 Create 2 ... OK\n");
 		vytvorCestu(Princezna3, dist, &DrakPrincenza3GV);
-		//printf("# NoGenerator 1 Create 3 ... OK\n");
 		if (Generator.x != -1)
 			vytvorCestu(Generator, dist, &DrakGenerator);
-		//printf("# NoGenerator 1 Create 4 ... OK\n");
-		//printf("# NoGenerator 1 ... OK\n");
 
 		startSearch(mapa, n, m, teleporty, Princezna1, OFF, queue, dist, INT_MAX);
 		vytvorCestu(Princezna2, dist, &P1P2GN);
 		vytvorCestu(Princezna3, dist, &P1P3GN);
 		if (Generator.x != -1)
 			vytvorCestu(Generator, dist, &P1G);
-		//printf("# NoGenerator 2 ... OK\n");
 
 		startSearch(mapa, n, m, teleporty, Princezna2, OFF, queue, dist, INT_MAX);
 		vytvorCestu(Princezna1, dist, &P2P1GN);
 		vytvorCestu(Princezna3, dist, &P2P3GN);
 		if (Generator.x != -1)
 			vytvorCestu(Generator, dist, &P2G);
-		//printf("# NoGenerator 3 ... OK\n");
 
 		startSearch(mapa, n, m, teleporty, Princezna3, OFF, queue, dist, INT_MAX);
 		vytvorCestu(Princezna1, dist, &P3P1GN);
 		vytvorCestu(Princezna2, dist, &P3P2GN);
 		if (Generator.x != -1)
 			vytvorCestu(Generator, dist, &P3G);
-		//printf("# NoGenerator 4 ... OK\n");
 	}
 	// ReSharper restore CppLocalVariableMightNotBeInitialized
 
@@ -916,16 +846,6 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 		// Start->Drak->Princezna->Princezna->Princezna
 		sdppp(&list);
 
-		/*printf("Main calling set of Updates function\n");
-		PathPart* temp = list.parts;
-		while (temp)
-		{
-		printf("# pointer: %p | count of values: %d | first value: [%d:%d]\n", temp->part, temp->part->steps, temp->part->cesta[0], temp->part->cesta[1]);
-		temp = temp->next;
-		}
-		printf("Last pointer should be: %p\n", &StartDrak);*/
-		//vypisCestu(StartDrak, TOSTRING(StartDrak));
-
 		if (Generator.x != -1)
 		{
 			// Start->Drak->Princezna->Generator->Princezna->Princezna
@@ -939,7 +859,6 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 
 	//VypisCesty(StartDrak, StartGeneratorDrak, DrakGenerator, DrakPrincenza1GV, DrakPrincenza2GV, DrakPrincenza3GV, DrakPrincenza1GZ, DrakPrincenza2GZ, DrakPrincenza3GZ, GeneratorPrincenza1, GeneratorPrincenza2, GeneratorPrincenza3, P1P2GZ, P1P3GZ, P2P1GZ, P2P3GZ, P3P1GZ, P3P2GZ, P1P2GN, P1P3GN, P2P1GN, P2P3GN, P3P1GN, P3P2GN, P1G, P2G, P3G);
 
-	int* result;
 	if (list.parts)
 	{
 		*dlzka_cesty = list.steps + 1;
@@ -978,10 +897,10 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 	printf("# Result ... OK\n");
 
 
-	/*Teleport * tTemp;
-	for(i = 0; i < 10; i++)
+	Teleport* tTemp;
+	for (i = 0; i < 10; i++)
 	{
-		while(teleporty[i])
+		while (teleporty[i])
 		{
 			tTemp = teleporty[i];
 			teleporty[i] = tTemp->next;
@@ -989,7 +908,6 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 		}
 	}
 	free(teleporty);
-	printf("# Free TP ... OK\n");
 
 	for (i = 0; i < n; i++)
 	{
@@ -998,23 +916,19 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 	}
 	free(dist);
 	free(distGen);
-	printf("# Free Dist ... OK\n");
 
-	free(StartDrak.cesta); 
+	free(StartDrak.cesta);
 	free(StartGeneratorDrak.cesta);
 	free(DrakGenerator.cesta);
-	printf("# Free S ... OK\n");
 	free(DrakPrincenza1GV.cesta);
 	free(DrakPrincenza2GV.cesta);
 	free(DrakPrincenza3GV.cesta);
 	free(DrakPrincenza1GZ.cesta);
 	free(DrakPrincenza2GZ.cesta);
 	free(DrakPrincenza3GZ.cesta);
-	printf("# Free D ... OK\n");
 	free(GeneratorPrincenza1.cesta);
 	free(GeneratorPrincenza2.cesta);
 	free(GeneratorPrincenza3.cesta);
-	printf("# Free G ... OK\n");
 	free(P1P2GZ.cesta);
 	free(P1P3GZ.cesta);
 	free(P2P1GZ.cesta);
@@ -1027,19 +941,15 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 	free(P2P3GN.cesta);
 	free(P3P1GN.cesta);
 	free(P3P2GN.cesta);
-	printf("# Free P ... OK\n");
 	free(P1G.cesta);
 	free(P2G.cesta);
 	free(P3G.cesta);
 
-	printf("# Free ... OK\n");*/
+	printf("# Free ... OK\n");
 
 	//printf("%d\n", *dlzka_cesty);
 	//for (i = 0; i < *dlzka_cesty; ++i)
 	//	printf("%d %d\n", result[i * 2], result[i * 2 + 1]);
-
-	//if (*dlzka_cesty == 44)
-	//	*dlzka_cesty = 0;
 
 	return result;
 }
@@ -1048,8 +958,8 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 
 void main()
 {
-	int n = 100;
-	int m = 10;
+	int n = 11;
+	int m = 11;
 	char** mapa = malloc(n * sizeof(char*));
 	int i;
 	for (i = 0; i < n; i++)
@@ -1062,7 +972,7 @@ void main()
 	strncpy(mapa[i++], "CCCCHHHHCHCCCHCCCCCHCCHCCCCHCH", m);
 	strncpy(mapa[i], "CPHHCCHHCCCHHCHHHCCHCHCHHCCHCC", m);*/
 
-	/*strncpy(mapa[i++], "HHHHCHHCCCH", m);
+	strncpy(mapa[i++], "HHHHCHHCCCH", m);
 	strncpy(mapa[i++], "HCHHCCCCCHC", m);
 	strncpy(mapa[i++], "HPHCCCHHHHC", m);
 	strncpy(mapa[i++], "CHHCHHCHCCC", m);
@@ -1072,7 +982,7 @@ void main()
 	strncpy(mapa[i++], "HHCHCPHHCCP", m);
 	strncpy(mapa[i++], "HHHCHCHCCCC", m);
 	strncpy(mapa[i++], "CCDCCHCHCCC", m);
-	strncpy(mapa[i], "CCCCCHCCCHH", m);*/
+	strncpy(mapa[i], "CCCCCHCCCHH", m);
 
 	/*strncpy(mapa[i++], "CCCCCCCCHGCCCHCCCCCCHCCCCCCCHCCCHHHCHCCCCCCCCCCCCC", m);
 	strncpy(mapa[i++], "CCCCCCCHC2CHCCCHCHCCCCCHHHCHCCHHHCCC0CCCCHCCHCCCCC", m);
@@ -1115,7 +1025,7 @@ void main()
 	strncpy(mapa[i++], "CHHHHHHHCCHCCCCCHCCCHCCCCCCCCHCHCCCCCCCHHCCCCHCCC0", m);
 	strncpy(mapa[i], "CCCCHHCCCHHCHCCCCCHHCCCHCCCCCCHHCCCCCCCHCCCHCCCCCC", m);*/
 
-	strncpy(mapa[i++], "..........", m);
+	/*strncpy(mapa[i++], "..........", m);
 	strncpy(mapa[i++], "..........", m);
 	strncpy(mapa[i++], "..........", m);
 	strncpy(mapa[i++], "....0.....", m);
@@ -1214,7 +1124,7 @@ void main()
 	strncpy(mapa[i++], "..........", m);
 	strncpy(mapa[i++], ".......0..", m);
 	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i], "..........", m);
+	strncpy(mapa[i], "..........", m);*/
 
 	/*for (i = 0; i < 0; i++)
 	strncpy(mapa[i], "....................", m);
@@ -1234,7 +1144,7 @@ void main()
 	strncpy(mapa[i], "....................", m);*/
 
 	int dlzka_cesty;
-	int* cesta = zachran_princezne(mapa, n, m, 425, &dlzka_cesty);
+	int* cesta = zachran_princezne(mapa, n, m, 66, &dlzka_cesty);
 
 	printf("Zachranit vsetky princezne dokazem v %d kokoch\n", dlzka_cesty);
 	for (i = 0; i < dlzka_cesty; ++i)
