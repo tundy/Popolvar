@@ -2,126 +2,44 @@
 #define _CRT_SECURE_NO_WARNINGS
 #endif // _MSC_VER
 
+
+
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <limits.h>
 
-#define TOSTRING(x) #x
-
-#define startX 0
-#define startY 0
-
 #define TRUE 1
 #define FALSE 0
-#define ON TRUE
-#define OFF FALSE
 
+#define MultiToSingle(width, x, y) (width*y + x)
+#define SingleToMulti(index, width, x, y) (x = index%width, y = index/width)
+
+// POPOLVAR
 #define PATH 'C'
 #define SLOW 'H'
 #define WALL 'N'
 #define DRAK 'D'
 #define PRIN 'P'
-#define P1 (PRIN + 1)
-#define P2 (PRIN + 2)
-#define P3 (PRIN + 3)
+#define PRIN1 ('P' + 1)
+#define PRIN2 ('P' + 2)
+#define PRIN3 ('P' + 3)
 #define GENE 'G'
 
 #define isTeleport(c) ((c) >= '0' && (c) <= '9')
-
-#ifdef _MSC_VER
-#pragma region Queue<void*>
-#endif
-
-typedef struct queueValue
-{
-	void* value;
-	struct queueValue* next;
-} qValue;
-
-typedef struct queue
-{
-	qValue* first;
-	qValue* last;
-} Queue;
-
-#define newQueue() (Queue*)calloc(1, sizeof(Queue))
-
-int enqueue(Queue* queue, void* title)
-{
-	if (!queue || !title) return FALSE;
-	if (queue->first)
-	{
-		if ((queue->last->next = (qValue*)malloc(sizeof(qValue))) == NULL) return FALSE;
-		queue->last = queue->last->next;
-	}
-	else
-	{
-		if ((queue->last = queue->first = (qValue*)malloc(sizeof(qValue))) == NULL) return FALSE;
-	}
-	queue->last->value = title;
-	queue->last->next = NULL;
-	return TRUE;
-}
-
-/*void * dequeue(Queue* queue)
-{
-if (queue->first)
-{
-qValue* temp = queue->first;
-queue->first = queue->first->next;
-void * value = temp->value;
-free(temp);
-return value;
-}
-return NULL;
-}*/
-
-void* top(Queue* queue)
-{
-	if (queue && queue->first)
-		return queue->first->value;
-	return NULL;
-}
-
-void pop(Queue* queue)
-{
-	if (queue && queue->first)
-	{
-		qValue* temp = queue->first;
-		queue->first = queue->first->next;
-		free(temp);
-	}
-}
-
-int any(Queue* queue)
-{
-	return queue && queue->first != NULL;
-}
-
-void clearQueue(Queue* queue)
-{
-	if (queue)
-	{
-		while (queue->first)
-		{
-			qValue* temp = queue->first;
-			queue->first = queue->first->next;
-			free(temp);
-		}
-	}
-}
-
-#ifdef _MSC_VER
-#pragma endregion
-#endif
 
 typedef struct point
 {
 	int x;
 	int y;
 } Point;
+
+typedef struct teleport
+{
+	Point point;
+	struct teleport* next;
+} Teleport;
 
 typedef struct pathBack
 {
@@ -143,254 +61,419 @@ typedef struct pathList
 	PathPart* parts;
 } PathList;
 
-typedef struct qv
+static Point Start, Drak, Princezna1, Princezna2, Princezna3, Generator;
+static Path StartDrak, StartGenerator, GeneratorDrak, DrakGenerator;
+static Path DrakPrincenza1GV, DrakPrincenza2GV, DrakPrincenza3GV;
+static Path DrakPrincenza1GZ, DrakPrincenza2GZ, DrakPrincenza3GZ;
+static Path GeneratorPrincenza1, GeneratorPrincenza2, GeneratorPrincenza3;
+static Path P1P2GZ, P1P3GZ, P2P1GZ, P2P3GZ, P3P1GZ, P3P2GZ;
+static Path P1P2GN, P1P3GN, P2P1GN, P2P3GN, P3P1GN, P3P2GN;
+static Path P1G, P2G, P3G;
+
+// A structure to represent a node in adjacency list
+typedef struct AdjListNode
 {
-	int slowed;
 	Point point;
-	Point* back;
-	int generator;
-} QV;
+	int weight;
+	struct AdjListNode* next;
+} Nodes;
 
-typedef struct teleport
+// A structure to represent an adjacency liat
+typedef struct AdjList
 {
-	Point point;
-	struct teleport* next;
-} Teleport;
+	Nodes* head; // pointer to head node of list
+} Graph;
 
-typedef struct title
+
+// A utility function to create a new adjacency list node
+Nodes* newAdjListNode(char** mapa, int x, int y)
 {
-	int steps;
-	int time;
-	Point* back;
-} Title;
-
-Point Drak, Princezna1, Princezna2, Princezna3, Generator;
-Path StartDrak, StartGeneratorDrak, DrakGenerator;
-Path DrakPrincenza1GV, DrakPrincenza2GV, DrakPrincenza3GV;
-Path DrakPrincenza1GZ, DrakPrincenza2GZ, DrakPrincenza3GZ;
-Path GeneratorPrincenza1, GeneratorPrincenza2, GeneratorPrincenza3;
-Path P1P2GZ, P1P3GZ, P2P1GZ, P2P3GZ, P3P1GZ, P3P2GZ;
-Path P1P2GN, P1P3GN, P2P1GN, P2P3GN, P3P1GN, P3P2GN;
-Path P1G, P2G, P3G;
-
-void clear(Title** dist, int n, int m)
-{
-	int x, y;
-	for (y = 0; y < n; y++)
-		for (x = 0; x < m; x++)
-			dist[y][x].time = INT_MAX;
-
-	dist[Drak.y][Drak.x].steps = -1;
-	dist[Princezna1.y][Princezna1.x].steps = -1;
-	dist[Princezna2.y][Princezna2.x].steps = -1;
-	dist[Princezna3.y][Princezna3.x].steps = -1;
-	if (Generator.x != -1)
-		dist[Generator.y][Generator.x].steps = -1;
+	Nodes* newNode = (Nodes*)malloc(sizeof(Nodes));
+	newNode->point.x = x;
+	newNode->point.y = y;
+	newNode->weight = (mapa[y][x] == SLOW) ? 2 : 1;
+	newNode->next = NULL;
+	return newNode;
 }
 
-QV* newQV(QV* back, int y, int x, int slowed)
+// A utility function that creates a graph of V vertices
+Graph* createGraph(int height, int width)
 {
-	if (back == NULL) return NULL;
-
-	QV* new_qv;
-	if ((new_qv = malloc(sizeof(QV))) == NULL) return NULL;
-
-	new_qv->back = (Point*)&back->point;
-	new_qv->point.y = y;
-	new_qv->point.x = x;
-	new_qv->generator = back->generator;
-	new_qv->slowed = slowed;
-
-	return new_qv;
+	return (Graph*)malloc(width * height * sizeof(Graph));
 }
 
-int UDLR(int n, int m, Queue* queue, QV* value, Point point)
+// Adds an edge to an undirected graph
+void addEdge(Graph* graph, int width, int srcX, int srcY, char** mapa, int destX, int destY)
 {
-	if (point.y - 1 >= 0)
-		if (!enqueue(queue, newQV(value, point.y - 1, point.x, 0)))
-			return FALSE;
-	if (point.x - 1 >= 0)
-		if (!enqueue(queue, newQV(value, point.y, point.x - 1, 0)))
-			return FALSE;
-	if (point.y + 1 < n)
-		if (!enqueue(queue, newQV(value, point.y + 1, point.x, 0)))
-			return FALSE;
-	if (point.x + 1 < m)
-		if (!enqueue(queue, newQV(value, point.y, point.x + 1, 0)))
-			return FALSE;
-	return TRUE;
+	if (mapa[destY][destX] == WALL) return;
+
+	// Add an edge from src to dest.  A new node is added to the adjacency
+	// list of src.  The node is added at the begining
+	int src = MultiToSingle(width, srcX, srcY);
+	Nodes* newNode = newAdjListNode(mapa, destX, destY);
+	newNode->next = graph[src].head;
+	graph[src].head = newNode;
+
+	// Since graph is undirected, add an edge from dest to src also
+	/*int dest = MultiToSingle(width, destX, destY);
+	newNode = newAdjListNode(mapa, destX, destY);
+	newNode->next = graph[dest].head;
+	graph[dest].head = newNode;*/
 }
 
-#define STEPS(point) dist[point.y][point.x].steps
-#define TIME(point) dist[point.y][point.x].time
-#define MAP(point) mapa[point.y][point.x]
-#define _STEPS(point) dist[point->y][point->x].steps
-#define _TIME(point) dist[point->y][point->x].time
-
-void updateDist(Title** dist, QV* value, int time)
+// Structure to represent a min heap node
+struct MinHeapNode
 {
-	TIME(value->point) = time;
-	STEPS(value->point) = _STEPS(value->back) + 1;
-	dist[value->point.y][value->point.x].back = value->back;
+	int v;
+	int dist;
+};
+
+// Structure to represent a min heap
+struct MinHeap
+{
+	int size; // Number of heap nodes present currently
+	int capacity; // Capacity of min heap
+	int* pos; // This is needed for decreaseKey()
+	struct MinHeapNode** array;
+};
+
+// A utility function to create a new Min Heap Node
+struct MinHeapNode* newMinHeapNode(int v, int dist)
+{
+	struct MinHeapNode* minHeapNode =
+		(struct MinHeapNode*) malloc(sizeof(struct MinHeapNode));
+	minHeapNode->v = v;
+	minHeapNode->dist = dist;
+	return minHeapNode;
 }
 
-QV* newStart(Title** dist, int x, int y, int gen)
+// A utility function to create a Min Heap
+struct MinHeap* createMinHeap(int capacity)
 {
-	QV* value;
-	if ((value = malloc(sizeof(QV))) == NULL) return NULL;
-
-	value->point.x = x;
-	value->point.y = y;
-	value->back = &value->point;
-	value->generator = gen;
-	value->slowed = 0;
-	dist[y][x].time = 0;
-	dist[y][x].steps = 0;
-	return value;
+	struct MinHeap* minHeap =
+		(struct MinHeap*) malloc(sizeof(struct MinHeap));
+	minHeap->pos = (int *)malloc(capacity * sizeof(int));
+	minHeap->size = 0;
+	minHeap->capacity = capacity;
+	minHeap->array =
+		(struct MinHeapNode**) malloc(capacity * sizeof(struct MinHeapNode*));
+	return minHeap;
 }
 
-int addToQueue(char** mapa, int n, int m, Teleport** teleporty, Queue* queue, QV* value)
+// A utility function to swap two nodes of min heap. Needed for min heapify
+void swapMinHeapNode(struct MinHeapNode** a, struct MinHeapNode** b)
 {
-	if (value->generator && isTeleport(MAP(value->point)))
+	struct MinHeapNode* t = *a;
+	*a = *b;
+	*b = t;
+}
+
+// A standard function to heapify at given idx
+// This function also updates position of nodes when they are swapped.
+// Position is needed for decreaseKey()
+void minHeapify(struct MinHeap* minHeap, int idx)
+{
+	int smallest, left, right;
+	smallest = idx;
+	left = 2 * idx + 1;
+	right = 2 * idx + 2;
+
+	if (left < minHeap->size &&
+		minHeap->array[left]->dist < minHeap->array[smallest]->dist)
+		smallest = left;
+
+	if (right < minHeap->size &&
+		minHeap->array[right]->dist < minHeap->array[smallest]->dist)
+		smallest = right;
+
+	if (smallest != idx)
 	{
-		Teleport* teleport = teleporty[MAP(value->point) - '0'];
-		while (teleport)
-		{
-			if (teleport->point.x != value->point.x || teleport->point.y != value->point.y)
-				if (!enqueue(queue, newQV(value, teleport->point.y, teleport->point.x, -1)))
-					return FALSE;
-			teleport = teleport->next;
-		}
+		// The nodes to be swapped in min heap
+		struct MinHeapNode* smallestNode = minHeap->array[smallest];
+		struct MinHeapNode* idxNode = minHeap->array[idx];
+
+		// Swap positions
+		minHeap->pos[smallestNode->v] = idx;
+		minHeap->pos[idxNode->v] = smallest;
+
+		// Swap nodes
+		swapMinHeapNode(&minHeap->array[smallest], &minHeap->array[idx]);
+
+		minHeapify(minHeap, smallest);
 	}
-	return UDLR(n, m, queue, value, value->point);
 }
 
-int dijkstra(char** mapa, int n, int m, Teleport** teleporty, Queue* queue, Title** dist, int maxTime)
+// A utility function to check if the given minHeap is ampty or not
+int isEmpty(struct MinHeap* minHeap)
 {
-	while (any(queue) && (STEPS(Drak) == -1 || STEPS(Princezna1) == -1 || STEPS(Princezna2) == -1 || STEPS(Princezna3) == -1 || (Generator.x == -1 || STEPS(Generator) == -1)))
+	return minHeap->size == 0;
+}
+
+// Standard function to extract minimum node from heap
+struct MinHeapNode* extractMin(struct MinHeap* minHeap)
+{
+	if (isEmpty(minHeap))
+		return NULL;
+
+	// Store the root node
+	struct MinHeapNode* root = minHeap->array[0];
+
+	// Replace root node with last node
+	struct MinHeapNode* lastNode = minHeap->array[minHeap->size - 1];
+	minHeap->array[0] = lastNode;
+
+	// Update position of last node
+	minHeap->pos[root->v] = minHeap->size - 1;
+	minHeap->pos[lastNode->v] = 0;
+
+	// Reduce heap size and heapify root
+	--minHeap->size;
+	minHeapify(minHeap, 0);
+
+	return root;
+}
+
+// Function to decreasy dist value of a given vertex v. This function
+// uses pos[] of min heap to get the current index of node in min heap
+void decreaseKey(struct MinHeap* minHeap, int v, int dist)
+{
+	// Get the index of v in  heap array
+	int i = minHeap->pos[v];
+
+	// Get the node and update its dist value
+	minHeap->array[i]->dist = dist;
+
+	// Travel up while the complete tree is not hepified.
+	// This is a O(Logn) loop
+	while (i && minHeap->array[i]->dist < minHeap->array[(i - 1) / 2]->dist)
 	{
-		QV* value = top(queue);
-		pop(queue);
+		// Swap this node with its parent
+		minHeap->pos[minHeap->array[i]->v] = (i - 1) / 2;
+		minHeap->pos[minHeap->array[(i - 1) / 2]->v] = i;
+		swapMinHeapNode(&minHeap->array[i], &minHeap->array[(i - 1) / 2]);
 
-		if (MAP(value->point) == WALL)
-			continue;
+		// move to parent index
+		i = (i - 1) / 2;
+	}
+}
 
-		int time = _TIME(value->back);
-		if (value->slowed != -1)
+// A utility function to check if a given vertex
+// 'v' is in min heap or not
+int isInMinHeap(struct MinHeap* minHeap, int v)
+{
+	if (minHeap->pos[v] < minHeap->size)
+		return TRUE;
+	return FALSE;
+}
+
+typedef struct dijkstraResult
+{
+	int* time;
+	int* back;
+} dResult;
+
+// The main function that calulates distances of shortest paths from src to all
+// vertices. It is a O(ELogV) function
+dResult* dijkstra(Graph* graph, int height, int width, int startX, int startY)
+{
+	int src = MultiToSingle(width, startX, startY);
+	int V = width * height;// Get the number of vertices in graph
+	dResult* result = malloc(sizeof(dResult));
+	result->time = (int*)malloc(V * sizeof(int)); // dist values used to pick minimum weight edge in cut
+	result->back = (int*)malloc(V * sizeof(int)); // dist values used to pick minimum weight edge in cut
+
+	// minHeap represents set E
+	struct MinHeap* minHeap = createMinHeap(V);
+
+	// Initialize min heap with all vertices. dist value of all vertices 
+	int v;
+	for (v = 0; v < V; ++v)
+	{
+		result->time[v] = INT_MAX ;
+		minHeap->array[v] = newMinHeapNode(v, result->time[v]);
+		minHeap->pos[v] = v;
+	}
+
+	// Make dist value of src vertex as 0 so that it is extracted first
+	minHeap->array[src] = newMinHeapNode(src, result->time[src]);
+	minHeap->pos[src] = src;
+	result->time[src] = 0;
+	decreaseKey(minHeap, src, result->time[src]);
+
+	// Initially size of min heap is equal to V
+	minHeap->size = V;
+
+	// In the followin loop, min heap contains all nodes
+	// whose shortest distance is not yet finalized.
+	while (!isEmpty(minHeap))
+	{
+		// Extract the vertex with minimum distance value
+		struct MinHeapNode* minHeapNode = extractMin(minHeap);
+		int u = minHeapNode->v; // Store the extracted vertex number
+
+		// Traverse through all adjacent vertices of u (the extracted
+		// vertex) and update their distance values
+		Nodes* pCrawl = graph[u].head;
+		while (pCrawl != NULL)
 		{
-			if (!value->slowed++ && MAP(value->point) == SLOW)
+			int v = MultiToSingle(width, pCrawl->point.x, pCrawl->point.y);
+
+			// If shortest distance to v is not finalized yet, and distance to v
+			// through u is less than its previously calculated distance
+			if (isInMinHeap(minHeap, v) && result->time[u] != INT_MAX &&
+				pCrawl->weight + result->time[u] < result->time[v])
 			{
-				if (!enqueue(queue, value))
-					return FALSE;
-				continue;
+				result->time[v] = result->time[u] + pCrawl->weight;
+				result->back[v] = u;
+
+				// update distance value in min heap also
+				decreaseKey(minHeap, v, result->time[v]);
 			}
-
-			time += MAP(value->point) == SLOW ? 2 : 1;
-		}
-
-		if (time < 0 || time > maxTime)
-			continue;
-
-		if (time < TIME(value->point))
-		{
-			if (dist[value->point.y][value->point.x].time != INT_MAX)
-				continue;
-			updateDist(dist, value, time);
-			if (!addToQueue(mapa, n, m, teleporty, queue, value))
-				return FALSE;
+			pCrawl = pCrawl->next;
 		}
 	}
-	clearQueue(queue);
-	return TRUE;
+
+	return result;
 }
 
-int vytvorCestu(Point ciel, Title** dist, Path* pathBack)
+void UDLR(char** mapa, int height, int width, int x, int y, Graph* graph)
 {
-	if (STEPS(ciel) >= 0)
-	{
-		pathBack->steps = STEPS(ciel);
-		pathBack->time = TIME(ciel);
-		if ((pathBack->cesta = malloc(pathBack->steps * 2 * sizeof(int))) == NULL) return FALSE;
-		int index = pathBack->steps * 2;
-		Point* p = (Point*)&ciel;
-		while (index > 0)
-		{
-			pathBack->cesta[--index] = p->y;
-			pathBack->cesta[--index] = p->x;
-			p = dist[p->y][p->x].back;
-		}
-	}
-	return TRUE;
+	if (mapa[y][x] == WALL) return;
+	if ((x - 1) >= 0)
+		addEdge(graph, width, x, y, mapa, x - 1, y);
+	if ((y - 1) >= 0)
+		addEdge(graph, width, x, y, mapa, x, y - 1);
+	if ((x + 1) < width)
+		addEdge(graph, width, x, y, mapa, x + 1, y);
+	if ((y + 1) < height)
+		addEdge(graph, width, x, y, mapa, x, y + 1);
 }
 
-int vytvorStartDrak(int t, Point Drak, Point Generator, Title** dist, Title** distGen, Path* startDrak, Path* startGeneratorDrak)
+int InitRescue(char** mapa, int height, int width, Teleport** teleporty, Graph* graph)
 {
-	if (Generator.x != -1 && distGen[Drak.y][Drak.x].steps >= 0)
-	{
-		int index, offset = 0;
-		if (STEPS(Generator) > 0)
-		{
-			startGeneratorDrak->steps = distGen[Drak.y][Drak.x].steps + STEPS(Generator);
-			startGeneratorDrak->time = distGen[Drak.y][Drak.x].time + TIME(Generator);
-			offset = STEPS(Generator) * 2;
-		}
-		else if (Generator.x != startX || Generator.y != startY)
-		{
-			return TRUE;
-		}
-		else
-		{
-			startGeneratorDrak->steps = distGen[Drak.y][Drak.x].steps;
-			startGeneratorDrak->time = distGen[Drak.y][Drak.x].time;
-		}
+	int x, y, temp = 1;
 
-		// Ak sa k Drakovi pomocou generatora nedostanes ani v case t nema zmysel si to pamatat
-		if (startGeneratorDrak->time <= t)
-		{
-			if ((startGeneratorDrak->cesta = malloc(startGeneratorDrak->steps * 2 * sizeof(int))) == NULL) return FALSE;
-			index = distGen[Drak.y][Drak.x].steps * 2;
-			Point* p = (Point*)&Drak;
-			while (index > 0)
-			{
-				startGeneratorDrak->cesta[offset + --index] = p->y;
-				startGeneratorDrak->cesta[offset + --index] = p->x;
-				p = distGen[p->y][p->x].back;
-			}
-			while (offset > 0)
-			{
-				startGeneratorDrak->cesta[--offset] = p->y;
-				startGeneratorDrak->cesta[--offset] = p->x;
-				p = dist[p->y][p->x].back;
-			}
-		}
-		//else printf("# Nedokazem vcas dobehnut k drakovi pomocou generatora\n");
-	}
-	//else printf("# Nedokazem vcas dobehnut k drakovi pomocou generatora\n");
+	Generator.x = -1;
 
-	// Ak cesta cez generator bola rychlejsie nema zmysel si pamatat cestu bez generatora
-	if (STEPS(Drak) >= 0)
+	P1G.cesta = P2G.cesta = P3G.cesta =
+		DrakPrincenza1GV.cesta = DrakPrincenza2GV.cesta = DrakPrincenza3GV.cesta =
+		DrakPrincenza1GZ.cesta = DrakPrincenza2GZ.cesta = DrakPrincenza3GZ.cesta =
+		GeneratorPrincenza1.cesta = GeneratorPrincenza2.cesta = GeneratorPrincenza3.cesta =
+		P1P2GZ.cesta = P1P3GZ.cesta = P2P1GZ.cesta = P2P3GZ.cesta = P3P1GZ.cesta = P3P2GZ.cesta =
+		P1P2GN.cesta = P1P3GN.cesta = P2P1GN.cesta = P2P3GN.cesta = P3P1GN.cesta = P3P2GN.cesta =
+		DrakGenerator.cesta = StartGenerator.cesta = GeneratorDrak.cesta = StartDrak.cesta = NULL;
+
+	for (y = 0; y < height; y++)
 	{
-		if (TIME(Drak) <= t)
+		for (x = 0; x < width; x++)
 		{
-			if (startGeneratorDrak->cesta == NULL || STEPS(Drak) < startGeneratorDrak->steps)
+			if (mapa[y][x] == PRIN)
 			{
-				startDrak->steps = dist[Drak.y][Drak.x].steps;
-				startDrak->time = dist[Drak.y][Drak.x].time;
-				if ((startDrak->cesta = malloc(startDrak->steps * 2 * sizeof(int))) == NULL) return FALSE;
-				int index = STEPS(Drak) * 2;
-				Point* p = (Point*)&Drak;
-				while (index > 0)
+				mapa[y][x] += temp++;
+				switch (mapa[y][x])
 				{
-					startDrak->cesta[--index] = p->y;
-					startDrak->cesta[--index] = p->x;
-					p = dist[p->y][p->x].back;
+				case PRIN1:
+					Princezna1.x = x;
+					Princezna1.y = y;
+					break;
+				case PRIN2:
+					Princezna2.x = x;
+					Princezna2.y = y;
+					break;
+				case PRIN3:
+					Princezna3.x = x;
+					Princezna3.y = y;
+					break;
+				default: break;
 				}
 			}
-			//else printf("# Pomocou generatora dokazem dobehnut k drakovi rychlejsie\n");
+			else if (mapa[y][x] == DRAK)
+			{
+				Drak.x = x;
+				Drak.y = y;
+			}
+			else if (mapa[y][x] == GENE)
+			{
+				Generator.x = x;
+				Generator.y = y;
+			}
+			else if (isTeleport(mapa[y][x]))
+			{
+				int index = mapa[y][x] - '0';
+				Teleport* teleport;
+				if ((teleport = malloc(sizeof(Teleport))) == NULL) return FALSE;
+				teleport->next = teleporty[index];
+				teleport->point.x = x;
+				teleport->point.y = y;
+				teleporty[index] = teleport;
+			}
+
+			int src = MultiToSingle(width, x, y);
+			graph[src].head = NULL;
+			UDLR(mapa, height, width, x, y, graph);
 		}
-		//else printf("# Nedokazem vcas dobehnut k drakovi bez pomoci generatora\n");
 	}
-	//else printf("# Nedokazem sa dostat k drakovi bez generatora\n");
+	return TRUE;
+}
+
+void addTeleports(Teleport** teleporty, Graph* graph, int width)
+{
+	int i, src;
+	Teleport* tSrc;
+	Teleport* tDest;
+	Nodes* newNode;
+	for (i = 0; i < 10; i++)
+	{
+		tSrc = teleporty[i];
+		while (tSrc)
+		{
+			tDest = teleporty[i];
+			while (tDest)
+			{
+				if (tSrc->point.x != tDest->point.x || tSrc->point.y != tDest->point.y)
+				{
+					src = MultiToSingle(width, tSrc->point.x, tSrc->point.y);
+					newNode = (Nodes*)malloc(sizeof(Nodes));
+					newNode->point.x = tDest->point.x;
+					newNode->point.y = tDest->point.y;
+					newNode->weight = 0;
+					newNode->next = graph[src].head;
+					graph[src].head = newNode;
+				}
+				tDest = tDest->next;
+			}
+			tSrc = tSrc->next;
+		}
+	}
+}
+
+int vytvorCestu(Point start, Point ciel, dResult* dResult, int width, Path* pathBack)
+{
+	int index, x, y;
+	int dest = MultiToSingle(width, ciel.x, ciel.y);
+	int src = MultiToSingle(width, start.x, start.y);
+
+	if (dResult->time[dest] != INT_MAX)
+	{
+		index = dest;
+		pathBack->steps = 0;
+		pathBack->time = dResult->time[dest];
+		while (src != index)
+		{
+			index = dResult->back[index];
+			++pathBack->steps;
+		}
+
+		if ((pathBack->cesta = malloc(pathBack->steps * 2 * sizeof(int))) == NULL) return FALSE;
+		int index = pathBack->steps * 2;
+		while (index > 0)
+		{
+			SingleToMulti(dest, width, x, y);
+			pathBack->cesta[--index] = y;
+			pathBack->cesta[--index] = x;
+			dest = dResult->back[dest];
+		}
+	}
 
 	return TRUE;
 }
@@ -405,6 +488,47 @@ void vypisCestu(Path pathBack, char* cesta)
 			printf("[%d;%d] ", pathBack.cesta[i * 2], pathBack.cesta[i * 2 + 1]);
 		putchar('\n');
 	}
+}
+
+#define TOSTRING(x) #x
+
+void VypisCesty()
+{
+	vypisCestu(StartDrak, TOSTRING(StartDrak));
+	vypisCestu(StartGenerator, TOSTRING(StartGenerator));
+
+	vypisCestu(DrakGenerator, TOSTRING(DrakGenerator));
+	vypisCestu(GeneratorDrak, TOSTRING(GeneratorDrak));
+
+	vypisCestu(DrakPrincenza1GV, TOSTRING(DrakPrincenza1GV));
+	vypisCestu(DrakPrincenza2GV, TOSTRING(DrakPrincenza2GV));
+	vypisCestu(DrakPrincenza3GV, TOSTRING(DrakPrincenza3GV));
+
+	vypisCestu(DrakPrincenza1GZ, TOSTRING(DrakPrincenza1GZ));
+	vypisCestu(DrakPrincenza2GZ, TOSTRING(DrakPrincenza2GZ));
+	vypisCestu(DrakPrincenza3GZ, TOSTRING(DrakPrincenza3GZ));
+
+	vypisCestu(GeneratorPrincenza1, TOSTRING(GeneratorPrincenza1));
+	vypisCestu(GeneratorPrincenza2, TOSTRING(GeneratorPrincenza2));
+	vypisCestu(GeneratorPrincenza3, TOSTRING(GeneratorPrincenza3));
+
+	vypisCestu(P1P2GZ, TOSTRING(P1P2GZ));
+	vypisCestu(P1P3GZ, TOSTRING(P1P3GZ));
+	vypisCestu(P2P1GZ, TOSTRING(P2P1GZ));
+	vypisCestu(P2P3GZ, TOSTRING(P2P3GZ));
+	vypisCestu(P3P1GZ, TOSTRING(P3P1GZ));
+	vypisCestu(P3P2GZ, TOSTRING(P3P2GZ));
+
+	vypisCestu(P1P2GN, TOSTRING(P1P2GN));
+	vypisCestu(P1P3GN, TOSTRING(P1P3GN));
+	vypisCestu(P2P1GN, TOSTRING(P2P1GN));
+	vypisCestu(P2P3GN, TOSTRING(P2P3GN));
+	vypisCestu(P3P1GN, TOSTRING(P3P1GN));
+	vypisCestu(P3P2GN, TOSTRING(P3P2GN));
+
+	vypisCestu(P1G, TOSTRING(P1G));
+	vypisCestu(P2G, TOSTRING(P2G));
+	vypisCestu(P3G, TOSTRING(P3G));
 }
 
 int updateList(PathList* list, int n_args, ...)
@@ -457,110 +581,6 @@ int updateList(PathList* list, int n_args, ...)
 	return TRUE;
 }
 
-int InitRescue(char** mapa, int n, int m, Teleport** teleporty)
-{
-	int x, y, temp = 1;
-
-	P1G.cesta = P2G.cesta = P3G.cesta =
-		DrakPrincenza1GV.cesta = DrakPrincenza2GV.cesta = DrakPrincenza3GV.cesta =
-		DrakPrincenza1GZ.cesta = DrakPrincenza2GZ.cesta = DrakPrincenza3GZ.cesta =
-		GeneratorPrincenza1.cesta = GeneratorPrincenza2.cesta = GeneratorPrincenza3.cesta =
-		P1P2GZ.cesta = P1P3GZ.cesta = P2P1GZ.cesta = P2P3GZ.cesta = P3P1GZ.cesta = P3P2GZ.cesta =
-		P1P2GN.cesta = P1P3GN.cesta = P2P1GN.cesta = P2P3GN.cesta = P3P1GN.cesta = P3P2GN.cesta =
-		DrakGenerator.cesta = StartGeneratorDrak.cesta = StartDrak.cesta = NULL;
-
-	for (y = 0; y < n; y++)
-	{
-		for (x = 0; x < m; x++)
-		{
-			//if (Drak.x != -1 && Princezna1.x != -1 && Princezna2.x != -1 && Princezna3.x != -1 && Generator.x != -1) break;
-
-			if (mapa[y][x] == PRIN)
-			{
-				mapa[y][x] += temp++;
-				switch (mapa[y][x])
-				{
-				case P1:
-					Princezna1.x = x;
-					Princezna1.y = y;
-					break;
-				case P2:
-					Princezna2.x = x;
-					Princezna2.y = y;
-					break;
-				case P3:
-					Princezna3.x = x;
-					Princezna3.y = y;
-					break;
-				default: break;
-				}
-			}
-			else if (mapa[y][x] == DRAK)
-			{
-				Drak.x = x;
-				Drak.y = y;
-			}
-			else if (mapa[y][x] == GENE)
-			{
-				Generator.x = x;
-				Generator.y = y;
-			}
-			else if (isTeleport(mapa[y][x]))
-			{
-				int index = mapa[y][x] - '0';
-				Teleport* teleport;
-				if ((teleport = malloc(sizeof(Teleport))) == NULL) return FALSE;
-				teleport->next = teleporty[index];
-				teleport->point.x = x;
-				teleport->point.y = y;
-				teleporty[index] = teleport;
-			}
-		}
-	}
-	return TRUE;
-}
-
-void fasterfrom2(Point point1, Point point2, Path* path1, Path* path2, Title** dist)
-{
-	if (TIME(point1) == TIME(point2))
-	{
-		vytvorCestu(point1, dist, path1);
-		vytvorCestu(point2, dist, path2);
-	}
-	else if (TIME(point1) < TIME(point2))
-		vytvorCestu(point1, dist, path1);
-	else
-		vytvorCestu(point2, dist, path2);
-}
-
-void fasterfrom3(Point point1, Point point2, Point point3, Path* path1, Path* path2, Path* path3, Title** dist)
-{
-	if (TIME(point1) == TIME(point2))
-	{
-		if (TIME(point1) == TIME(point3))
-		{
-			// point1 == point2 == point3
-			vytvorCestu(point1, dist, path1);
-			vytvorCestu(point2, dist, path2);
-			vytvorCestu(point3, dist, path3);
-		}
-		else if (TIME(point3) < TIME(point1))
-		{
-			// point3 < point1 && point3 < point2
-			vytvorCestu(point3, dist, path3);
-		}
-		else
-		{
-			// point1 < point3 && point2 < point3 && point1 == point2
-			vytvorCestu(point1, dist, path1);
-			vytvorCestu(point2, dist, path2);
-		}
-	}
-	else if (TIME(point1) < TIME(point2))
-		fasterfrom2(point1, point3, path1, path3, dist);
-	else
-		fasterfrom2(point2, point3, path2, path3, dist);
-}
 
 int sdppp(PathList* list)
 {
@@ -579,14 +599,14 @@ int sdppp(PathList* list)
 int sgdppp(PathList* list)
 {
 	return !(
-		!updateList(list, 4, &StartGeneratorDrak, &DrakPrincenza1GZ, &P1P2GZ, &P2P3GZ) ||
-		!updateList(list, 4, &StartGeneratorDrak, &DrakPrincenza1GZ, &P1P3GZ, &P3P2GZ) ||
+		!updateList(list, 5, &StartGenerator, &GeneratorDrak, &DrakPrincenza1GZ, &P1P2GZ, &P2P3GZ) ||
+		!updateList(list, 5, &StartGenerator, &GeneratorDrak, &DrakPrincenza1GZ, &P1P3GZ, &P3P2GZ) ||
 
-		!updateList(list, 4, &StartGeneratorDrak, &DrakPrincenza2GZ, &P2P1GZ, &P1P3GZ) ||
-		!updateList(list, 4, &StartGeneratorDrak, &DrakPrincenza2GZ, &P2P3GZ, &P3P1GZ) ||
+		!updateList(list, 5, &StartGenerator, &GeneratorDrak, &DrakPrincenza2GZ, &P2P1GZ, &P1P3GZ) ||
+		!updateList(list, 5, &StartGenerator, &GeneratorDrak, &DrakPrincenza2GZ, &P2P3GZ, &P3P1GZ) ||
 
-		!updateList(list, 4, &StartGeneratorDrak, &DrakPrincenza3GZ, &P3P1GZ, &P1P2GZ) ||
-		!updateList(list, 4, &StartGeneratorDrak, &DrakPrincenza3GZ, &P3P2GZ, &P2P1GZ)
+		!updateList(list, 5, &StartGenerator, &GeneratorDrak, &DrakPrincenza3GZ, &P3P1GZ, &P1P2GZ) ||
+		!updateList(list, 5, &StartGenerator, &GeneratorDrak, &DrakPrincenza3GZ, &P3P2GZ, &P2P1GZ)
 	);
 }
 
@@ -632,189 +652,118 @@ int sdppgp(PathList* list)
 	);
 }
 
-int startSearch(char** mapa, int n, int m, Teleport** teleporty, Point startPoint, int gStatus, Queue* queue, Title** dist, int t)
-{
-	clear(dist, n, m);
-	QV* start;
-	if ((start = newStart(dist, startPoint.x, startPoint.y, gStatus)) == NULL) return FALSE;
-	if (!UDLR(n, m, queue, start, start->point)) return FALSE;
-	return dijkstra(mapa, n, m, teleporty, queue, dist, t);
-}
 
-void VypisCesty()
-{
-	vypisCestu(StartDrak, TOSTRING(StartDrak));
-	vypisCestu(DrakGenerator, TOSTRING(DrakGenerator));
-	vypisCestu(StartGeneratorDrak, TOSTRING(StartGeneratorDrak));
-
-	vypisCestu(DrakPrincenza1GV, TOSTRING(DrakPrincenza1GV));
-	vypisCestu(DrakPrincenza2GV, TOSTRING(DrakPrincenza2GV));
-	vypisCestu(DrakPrincenza3GV, TOSTRING(DrakPrincenza3GV));
-
-	vypisCestu(DrakPrincenza1GZ, TOSTRING(DrakPrincenza1GZ));
-	vypisCestu(DrakPrincenza2GZ, TOSTRING(DrakPrincenza2GZ));
-	vypisCestu(DrakPrincenza3GZ, TOSTRING(DrakPrincenza3GZ));
-
-	vypisCestu(GeneratorPrincenza1, TOSTRING(GeneratorPrincenza1));
-	vypisCestu(GeneratorPrincenza2, TOSTRING(GeneratorPrincenza2));
-	vypisCestu(GeneratorPrincenza3, TOSTRING(GeneratorPrincenza3));
-
-	vypisCestu(P1P2GZ, TOSTRING(P1P2GZ));
-	vypisCestu(P1P3GZ, TOSTRING(P1P3GZ));
-	vypisCestu(P2P1GZ, TOSTRING(P2P1GZ));
-	vypisCestu(P2P3GZ, TOSTRING(P2P3GZ));
-	vypisCestu(P3P1GZ, TOSTRING(P3P1GZ));
-	vypisCestu(P3P2GZ, TOSTRING(P3P2GZ));
-
-	vypisCestu(P1P2GN, TOSTRING(P1P2GN));
-	vypisCestu(P1P3GN, TOSTRING(P1P3GN));
-	vypisCestu(P2P1GN, TOSTRING(P2P1GN));
-	vypisCestu(P2P3GN, TOSTRING(P2P3GN));
-	vypisCestu(P3P1GN, TOSTRING(P3P1GN));
-	vypisCestu(P3P2GN, TOSTRING(P3P2GN));
-
-	vypisCestu(P1G, TOSTRING(P1G));
-	vypisCestu(P2G, TOSTRING(P2G));
-	vypisCestu(P3G, TOSTRING(P3G));
-}
-
-int* result = NULL;
-
-int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
+int* zachran_princezne(char** mapa, int height, int width, int t, int* dlzka_cesty)
 {
 	*dlzka_cesty = 0;
 
-#ifdef _MSC_VER
-#pragma region Init
-#endif
-	Generator.x = -1;
+	Start.x = 0;
+	Start.y = 0;
+
+	Graph* graph;
+	dResult* dResult;
 	Teleport** teleporty;
-	if ((teleporty = calloc(10, sizeof(Teleport*))) == NULL) return NULL;
 
-	// Zisti suradnice
-	if (!InitRescue(mapa, n, m, teleporty)) return NULL;
-	//printf("# InitRescue ... OK\n");
+	if ((teleporty = (Teleport**)calloc(10, sizeof(Teleport*))) == NULL) return NULL;
+	if ((graph = createGraph(height, width)) == NULL) return NULL;
+	if (!InitRescue(mapa, height, width, teleporty, graph)) return NULL;
 
-	//int k;
-	//for (k = 0; k < n; k++)
-	//	printf("%.*s\n", m, mapa[k]);
+	dResult = dijkstra(graph, height, width, 0, 0);
+	int i = MultiToSingle(width, Drak.x, Drak.y);
+	if (dResult->time[i] <= t)
+		vytvorCestu(Start, Drak, dResult, width, &StartDrak);
+	i = MultiToSingle(width, Generator.x, Generator.y);
+	if (Generator.x != -1 && dResult->time[i] <= t)
+		vytvorCestu(Start, Generator, dResult, width, &StartGenerator);
 
-	int i;
-	QV* start;
-	Queue* queue;
-	Title** dist;
-	Title** distGen;
+	dResult = dijkstra(graph, height, width, Drak.x, Drak.y);
+	if (Generator.x != -1)
+		vytvorCestu(Drak, Generator, dResult, width, &DrakGenerator);
+	vytvorCestu(Drak, Princezna1, dResult, width, &DrakPrincenza1GV);
+	vytvorCestu(Drak, Princezna2, dResult, width, &DrakPrincenza2GV);
+	vytvorCestu(Drak, Princezna3, dResult, width, &DrakPrincenza3GV);
+	free(dResult);
 
-	if ((queue = newQueue()) == NULL) return NULL;
-	if ((dist = malloc(n * sizeof(Title*))) == NULL) return NULL;
-	if ((distGen = malloc(n * sizeof(Title*))) == NULL) return NULL;
-	for (i = 0; i < n; i++)
-	{
-		if ((dist[i] = malloc(m * sizeof(Title))) == NULL) return NULL;
-		if ((distGen[i] = malloc(m * sizeof(Title))) == NULL) return NULL;
-	}
-#ifdef _MSC_VER
-#pragma endregion
-#endif
-	printf("# Init ... OK\n");
+	dResult = dijkstra(graph, height, width, Princezna1.x, Princezna1.y);
+	if (Generator.x != -1)
+		vytvorCestu(Princezna1, Generator, dResult, width, &P1G);
+	vytvorCestu(Princezna1, Princezna2, dResult, width, &P1P2GN);
+	vytvorCestu(Princezna1, Princezna3, dResult, width, &P1P3GN);
+	free(dResult);
 
-	// ReSharper disable CppLocalVariableMightNotBeInitialized
-	clear(dist, n, m);
-	if ((start = newStart(dist, startX, startY, mapa[startY][startX] == GENE)) == NULL) return NULL;
-	if (!UDLR(n, m, queue, start, start->point)) return NULL;
-	if (!dijkstra(mapa, n, m, teleporty, queue, dist, t)) return NULL;
-	//printf("# Dist 1 ... OK\n");
+	dResult = dijkstra(graph, height, width, Princezna2.x, Princezna2.y);
+	if (Generator.x != -1)
+		vytvorCestu(Princezna2, Generator, dResult, width, &P2G);
+	vytvorCestu(Princezna2, Princezna1, dResult, width, &P2P1GN);
+	vytvorCestu(Princezna2, Princezna3, dResult, width, &P2P3GN);
+	free(dResult);
+
+	dResult = dijkstra(graph, height, width, Princezna3.x, Princezna3.y);
+	if (Generator.x != -1)
+		vytvorCestu(Princezna3, Generator, dResult, width, &P3G);
+	vytvorCestu(Princezna3, Princezna1, dResult, width, &P3P1GN);
+	vytvorCestu(Princezna3, Princezna2, dResult, width, &P3P2GN);
+	free(dResult);
 
 	if (Generator.x != -1)
 	{
-		if (!startSearch(mapa, n, m, teleporty, Generator, ON, queue, distGen, t)) return NULL;
-		//fasterfrom3(Princezna1, Princezna2, Princezna3, &GeneratorPrincenza1, &GeneratorPrincenza2, &GeneratorPrincenza3, distGen);
-		if (!vytvorCestu(Princezna1, distGen, &GeneratorPrincenza1)) return NULL;
-		if (!vytvorCestu(Princezna2, distGen, &GeneratorPrincenza2)) return NULL;
-		if (!vytvorCestu(Princezna3, distGen, &GeneratorPrincenza3)) return NULL;
+		addTeleports(teleporty, graph, width);
+
+		dResult = dijkstra(graph, height, width, Generator.x, Generator.y);
+		i = MultiToSingle(width, Generator.x, Generator.y);
+		if (StartGenerator.cesta && (StartGenerator.time + dResult->time[i] <= t))
+			vytvorCestu(Generator, Drak, dResult, width, &GeneratorDrak);
+		vytvorCestu(Generator, Princezna1, dResult, width, &GeneratorPrincenza1);
+		vytvorCestu(Generator, Princezna2, dResult, width, &GeneratorPrincenza2);
+		vytvorCestu(Generator, Princezna3, dResult, width, &GeneratorPrincenza3);
+		free(dResult);
+
+		dResult = dijkstra(graph, height, width, Drak.x, Drak.y);
+		vytvorCestu(Drak, Princezna1, dResult, width, &DrakPrincenza1GZ);
+		vytvorCestu(Drak, Princezna2, dResult, width, &DrakPrincenza2GZ);
+		vytvorCestu(Drak, Princezna3, dResult, width, &DrakPrincenza3GZ);
+		free(dResult);
+
+		dResult = dijkstra(graph, height, width, Princezna1.x, Princezna1.y);
+		vytvorCestu(Princezna1, Princezna2, dResult, width, &P1P2GZ);
+		vytvorCestu(Princezna1, Princezna3, dResult, width, &P1P3GZ);
+		free(dResult);
+
+		dResult = dijkstra(graph, height, width, Princezna2.x, Princezna2.y);
+		vytvorCestu(Princezna2, Princezna1, dResult, width, &P2P1GZ);
+		vytvorCestu(Princezna2, Princezna3, dResult, width, &P2P3GZ);
+		free(dResult);
+
+		dResult = dijkstra(graph, height, width, Princezna3.x, Princezna3.y);
+		vytvorCestu(Princezna3, Princezna1, dResult, width, &P3P1GZ);
+		vytvorCestu(Princezna3, Princezna2, dResult, width, &P3P2GZ);
+		free(dResult);
 	}
-	//printf("# Dist 2 ... OK\n");
-	if (!vytvorStartDrak(t, Drak, Generator, dist, distGen, &StartDrak, &StartGeneratorDrak)) return NULL;
-	printf("# Start ... OK\n");
-	// PrincezneGeneratorOn
-	if (Generator.x != -1)
-	{
-		if (!startSearch(mapa, n, m, teleporty, Princezna1, ON, queue, dist, INT_MAX)) return NULL;
-		//fasterfrom2(Princezna2, Princezna3, &P1P2GZ, &P1P3GZ, dist);
-		if (!vytvorCestu(Princezna2, dist, &P1P2GZ)) return NULL;
-		if (!vytvorCestu(Princezna3, dist, &P1P3GZ)) return NULL;
+	//VypisCesty();
 
-		if (!startSearch(mapa, n, m, teleporty, Princezna2, ON, queue, dist, INT_MAX)) return NULL;
-		//fasterfrom2(Princezna1, Princezna3, &P2P1GZ, &P2P3GZ, dist);
-		if (!vytvorCestu(Princezna1, dist, &P2P1GZ)) return NULL;
-		if (!vytvorCestu(Princezna3, dist, &P2P3GZ)) return NULL;
-
-		if (!startSearch(mapa, n, m, teleporty, Princezna3, ON, queue, dist, INT_MAX)) return NULL;
-		//fasterfrom2(Princezna1, Princezna2, &P3P1GZ, &P3P2GZ, dist);
-		if (!vytvorCestu(Princezna1, dist, &P3P1GZ)) return NULL;
-		if (!vytvorCestu(Princezna2, dist, &P3P2GZ)) return NULL;
-
-		if (!startSearch(mapa, n, m, teleporty, Drak, ON, queue, dist, INT_MAX)) return NULL;
-		//fasterfrom3(Princezna1, Princezna2, Princezna3, &DrakPrincenza1GZ, &DrakPrincenza2GZ, &DrakPrincenza3GZ, dist);
-		if (!vytvorCestu(Princezna1, dist, &DrakPrincenza1GZ)) return NULL;
-		if (!vytvorCestu(Princezna2, dist, &DrakPrincenza2GZ)) return NULL;
-		if (!vytvorCestu(Princezna3, dist, &DrakPrincenza3GZ)) return NULL;
-	}
-	printf("# PrincezneGeneratorOn ... OK\n");
-
-	if (StartDrak.cesta) // Cesta k drakovi bez generatora
-	{
-		// Drak->Princezne bez generatora
-		if (!startSearch(mapa, n, m, teleporty, Drak, OFF, queue, dist, INT_MAX)) return NULL;
-		if (!vytvorCestu(Princezna1, dist, &DrakPrincenza1GV)) return NULL;
-		if (!vytvorCestu(Princezna2, dist, &DrakPrincenza2GV)) return NULL;
-		if (!vytvorCestu(Princezna3, dist, &DrakPrincenza3GV)) return NULL;
-		if (Generator.x != -1)
-			if (!vytvorCestu(Generator, dist, &DrakGenerator)) return NULL;
-
-		if (!startSearch(mapa, n, m, teleporty, Princezna1, OFF, queue, dist, INT_MAX)) return NULL;
-		if (!vytvorCestu(Princezna2, dist, &P1P2GN)) return NULL;
-		if (!vytvorCestu(Princezna3, dist, &P1P3GN)) return NULL;
-		if (Generator.x != -1)
-			if (!vytvorCestu(Generator, dist, &P1G)) return NULL;
-
-		if (!startSearch(mapa, n, m, teleporty, Princezna2, OFF, queue, dist, INT_MAX)) return NULL;
-		if (!vytvorCestu(Princezna1, dist, &P2P1GN)) return NULL;
-		if (!vytvorCestu(Princezna3, dist, &P2P3GN)) return NULL;
-		if (Generator.x != -1)
-			if (!vytvorCestu(Generator, dist, &P2G)) return NULL;
-
-		if (!startSearch(mapa, n, m, teleporty, Princezna3, OFF, queue, dist, INT_MAX)) return NULL;
-		if (!vytvorCestu(Princezna1, dist, &P3P1GN)) return NULL;
-		if (!vytvorCestu(Princezna2, dist, &P3P2GN)) return NULL;
-		if (Generator.x != -1)
-			if (!vytvorCestu(Generator, dist, &P3G)) return NULL;
-	}
-	// ReSharper restore CppLocalVariableMightNotBeInitialized
-
-	printf("# NoGenerator ... OK\n");
-	// Cesta k drakovi s generatorom
-	if (StartGeneratorDrak.cesta)
+	if (StartGenerator.cesta)
 	{
 		// Existuje cesta Start->Drak->Generator v case t?
 		if (DrakGenerator.cesta)
 		{
-			if (StartGeneratorDrak.time > DrakGenerator.time + StartDrak.time)
+			if (StartGenerator.time + GeneratorDrak.time > DrakGenerator.time + StartDrak.time)
 			{
-				free(StartGeneratorDrak.cesta);
-				StartGeneratorDrak.cesta = NULL;
+				free(StartGenerator.cesta);
+				StartGenerator.cesta = NULL;
+				free(GeneratorDrak.cesta);
+				GeneratorDrak.cesta = NULL;
 				//printf("# Aktivovat generator po drakovi je rychlejsie ako pred drakom\n");
 			}
 		}
 	}
-	printf("# SGD ... OK\n");
+
 
 	PathList list;
-	list.time = INT_MAX;
+	list.time = INT_MAX ;
 	list.parts = NULL;
 
 	// Start->Generator->Drak->Princezna->Princezna->Princezna
-	if (StartGeneratorDrak.cesta)
+	if (GeneratorDrak.cesta)
 		if (!sgdppp(&list)) return NULL;
 
 	// Start->Drak->...
@@ -836,9 +785,8 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 			if (!sdppgp(&list)) return NULL;
 		}
 	}
-	printf("# Search ... OK\n");
 
-	//VypisCesty(StartDrak, StartGeneratorDrak, DrakGenerator, DrakPrincenza1GV, DrakPrincenza2GV, DrakPrincenza3GV, DrakPrincenza1GZ, DrakPrincenza2GZ, DrakPrincenza3GZ, GeneratorPrincenza1, GeneratorPrincenza2, GeneratorPrincenza3, P1P2GZ, P1P3GZ, P2P1GZ, P2P3GZ, P3P1GZ, P3P2GZ, P1P2GN, P1P3GN, P2P1GN, P2P3GN, P3P1GN, P3P2GN, P1G, P2G, P3G);
+	int* result;
 
 	if (list.parts)
 	{
@@ -848,13 +796,8 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 		PathPart* part = list.parts;
 		int offset = *dlzka_cesty * 2;
 
-		//printf("Final loop\n");
-		//printf("Last pointer should be: %p\n", &StartDrak);
-		//vypisCestu(StartDrak, TOSTRING(StartDrak));
 		while (part)
 		{
-			//printf("# pointer: %p | count of values: %d | first value: [%d:%d]\n", part->part, part->part->steps, part->part->cesta[0], part->part->cesta[1]);
-
 			int end = part->part->steps * 2;
 			offset -= end;
 
@@ -873,65 +816,10 @@ int* zachran_princezne(char** mapa, int n, int m, int t, int* dlzka_cesty)
 	{
 		result = NULL;
 	}
-	printf("# Result ... OK\n");
-
-
-	Teleport* tTemp;
-	for (i = 0; i < 10; i++)
-	{
-		while (teleporty[i])
-		{
-			tTemp = teleporty[i];
-			teleporty[i] = tTemp->next;
-			free(tTemp);
-		}
-	}
-	free(teleporty);
-
-	for (i = 0; i < n; i++)
-	{
-		free(dist[i]);
-		free(distGen[i]);
-	}
-	free(dist);
-	free(distGen);
-
-	free(StartDrak.cesta);
-	free(StartGeneratorDrak.cesta);
-	free(DrakGenerator.cesta);
-	free(DrakPrincenza1GV.cesta);
-	free(DrakPrincenza2GV.cesta);
-	free(DrakPrincenza3GV.cesta);
-	free(DrakPrincenza1GZ.cesta);
-	free(DrakPrincenza2GZ.cesta);
-	free(DrakPrincenza3GZ.cesta);
-	free(GeneratorPrincenza1.cesta);
-	free(GeneratorPrincenza2.cesta);
-	free(GeneratorPrincenza3.cesta);
-	free(P1P2GZ.cesta);
-	free(P1P3GZ.cesta);
-	free(P2P1GZ.cesta);
-	free(P2P3GZ.cesta);
-	free(P3P1GZ.cesta);
-	free(P3P2GZ.cesta);
-	free(P1P2GN.cesta);
-	free(P1P3GN.cesta);
-	free(P2P1GN.cesta);
-	free(P2P3GN.cesta);
-	free(P3P1GN.cesta);
-	free(P3P2GN.cesta);
-	free(P1G.cesta);
-	free(P2G.cesta);
-	free(P3G.cesta);
-
-	printf("# Free ... OK\n");
-
-	//printf("%d\n", *dlzka_cesty);
-	//for (i = 0; i < *dlzka_cesty; ++i)
-	//	printf("%d %d\n", result[i * 2], result[i * 2 + 1]);
 
 	return result;
 }
+
 
 #ifdef _MSC_VER
 
@@ -951,159 +839,17 @@ void main()
 	strncpy(mapa[i++], "CCCCHHHHCHCCCHCCCCCHCCHCCCCHCH", m);
 	strncpy(mapa[i], "CPHHCCHHCCCHHCHHHCCHCHCHHCCHCC", m);*/
 
-	strncpy(mapa[i++], "HHHHCHHCCCH", m);
-	strncpy(mapa[i++], "HCHHCCCCCHC", m);
-	strncpy(mapa[i++], "HPHCCCHHHHC", m);
-	strncpy(mapa[i++], "CHHCHHCHCCC", m);
-	strncpy(mapa[i++], "HCHCCCCCHHC", m);
-	strncpy(mapa[i++], "HCHCCCHHHCH", m);
-	strncpy(mapa[i++], "HHHHCHHHCCH", m);
-	strncpy(mapa[i++], "HHCHCPHHCCP", m);
-	strncpy(mapa[i++], "HHHCHCHCCCC", m);
-	strncpy(mapa[i++], "CCDCCHCHCCC", m);
-	strncpy(mapa[i], "CCCCCHCCCHH", m);
-
-	/*strncpy(mapa[i++], "CCCCCCCCHGCCCHCCCCCCHCCCCCCCHCCCHHHCHCCCCCCCCCCCCC", m);
-	strncpy(mapa[i++], "CCCCCCCHC2CHCCCHCHCCCCCHHHCHCCHHHCCC0CCCCHCCHCCCCC", m);
-	strncpy(mapa[i++], "CCCHCCCC0CCC2CCCCHCCCCHCCCCCCCCCHCCCCCCHCCCCCHHCHC", m);
-	strncpy(mapa[i++], "CHCCCCCCCCCCCCCCCCCHHHCCCCHCHCHCHCC3CCHCCCCHCCCHCC", m);
-	strncpy(mapa[i++], "CCCHCCCHCHHCCHCCCCCHHCCHCCHCCCCCCHHCCHCCHHCHCCCCCH", m);
-	strncpy(mapa[i++], "HCCCCHCCHCCC0CCCCCCCCHCHCCCCCHCCCCHCCCCCCHHCCHCCCC", m);
-	strncpy(mapa[i++], "CCCHCHCCCCCHHCCCCCCHCCCCCHCCPCCCCCCCHCCCCCCCCHCHCC", m);
-	strncpy(mapa[i++], "CCCHCHCCHCHCCCCHHCCCCCCCCCCCHCCHCCCCCCCCCCCHCCCHHC", m);
-	strncpy(mapa[i++], "CCCCCCCCCCCCCHCCCCCHCHHCCHCCCCCCHHCCC3CHCHHCCCCCCH", m);
-	strncpy(mapa[i++], "CCCCCCHCCHC0HCCHCCHHCCCHCCCCCCCCHCCCCCCCCCCHHC3HCC", m);
-	strncpy(mapa[i++], "CCCHCCCCCCHCCHCCCCHHCHCCCCCCCCCHCCHCCCCCHCCCCCCCCC", m);
-	strncpy(mapa[i++], "HCCCCHHCCCCCCCCCCCCCHCCCCHHCCCCCCHCCHCCCCCCHCCCHCC", m);
-	strncpy(mapa[i++], "CCCHCCCCCCHCCCCCHHCCC0CCCHCHH1CCCCCCHCCCCCHCCHCCCC", m);
-	strncpy(mapa[i++], "HHCCCCCCHHCCCHHCHCCCCCCCCCCCCCCCCCCCHCHCCHCCCCHCCC", m);
-	strncpy(mapa[i++], "CCCCHCHCCHHCHHCCCHHCCHHCCCHCCCCCCCHHCCCCCCCCHCCCHC", m);
-	strncpy(mapa[i++], "CCCHCCHHCHCCHHCCCCCHCCCCCCCCCHCCCCCCCCCCCCCCCCCCCC", m);
-	strncpy(mapa[i++], "CCCCCCC2CHCCHCCCCCHCCCHCCCHHCCHCCHHCCCCCCCHCC0HHHC", m);
-	strncpy(mapa[i++], "HHCCCPCCCHCHH1CCCHCHCCCHCCCHCHHCCCCCCCCCCCCHCCCCCC", m);
-	strncpy(mapa[i++], "CCCCCCCHCHCCCHHCHCCHCHCCCCCCCCCCHCCCCCCCCCCCCHCCCC", m);
-	strncpy(mapa[i++], "CCCHCCCCCCCHHCH0CCCCCCCHCHCCCCHHHCCCCHCHCCCCCCC2CC", m);
-	strncpy(mapa[i++], "CCHHCCHCCCCCCCCCCCCCCCHCCCCCCCCHCCCCCCHCCCCCHCHCHH", m);
-	strncpy(mapa[i++], "HHCHCCCCCCCCCCCCCCCHCHCCCCCCHCCHCCCCCCCCCCCCCCCHCC", m);
-	strncpy(mapa[i++], "CCHCC0CHCCCCCHCCCCCCCCCCCHCHCCCC3HHCCCCCCC2CCCCCCC", m);
-	strncpy(mapa[i++], "HHCCCCHCCHCCCCCCCHCCCCCCCCCCCHCCHHCCHCCCHCHCHCHHCC", m);
-	strncpy(mapa[i++], "CCHCCCCHCCCCCCCCHCCCCCCCCCCCCHHHHHCHCCCCCCCCHCCCCC", m);
-	strncpy(mapa[i++], "CCCCCCCCHHCCCCCCCCCCCCHCCCHHCCCCCCHDCCCCCHCHCCHCCC", m);
-	strncpy(mapa[i++], "HCCCCCCCHHCCHCHCCCCHCHCCCCCCCCCCCCCHCCC2CCCCCCCCCC", m);
-	strncpy(mapa[i++], "HCHCHCHHHCCCCHHCCCCCHCC1CHCCHHCHHCCHCCCCCCCCCCCCCC", m);
-	strncpy(mapa[i++], "CCCCCCCCCCCHCCCCCCHCCCHCCHHHCCCCCHCCCCCHCCCCCCCCHC", m);
-	strncpy(mapa[i++], "CCHCHCCCCCCCCHCCCCHCHC2HHCCPHC0HCHHHCC2HCCHHHHCCCC", m);
-	strncpy(mapa[i++], "CCCCCCCCCCCHCCCCHCHCCCCCCCCHCCCCCCCCHHHCCHCCHCCCCH", m);
-	strncpy(mapa[i++], "CCHCCCCCCCCCCCCCHCCCCCCCCCCCCCHCCCCCCCHCCCCHCCHHHC", m);
-	strncpy(mapa[i++], "CHCHCCCCCCCHCCHHHCCHCCCCCHCHCCCCCHCHCCHCCCCCCCHCCC", m);
-	strncpy(mapa[i++], "HCCHCCHHCCCCCCCHHHCHHHCHHCCHCHCCCCCCCHCCCCCHCCCCCC", m);
-	strncpy(mapa[i++], "CCCCCCCCCCCCCCCCHCCCCCCHCHCCCHCCHHHCCHCHCCHHCCCCCH", m);
-	strncpy(mapa[i++], "CHCCHCCCHCCCCHCCCCCHHHCHCCCHHCCCCCCCHHCCCHCHCCHCCC", m);
-	strncpy(mapa[i++], "CCHCCCHCCCCCCCCCCC2CCCCCCHCCCCCCHCCCCCCCHCCCHCCCCC", m);
-	strncpy(mapa[i++], "HCCCCHHHCCCCCCHCCCHCHCCCCHCCCHCCCCCHCCCCCCCCCCCHCH", m);
-	strncpy(mapa[i++], "CHHHHHHHCCHCCCCCHCCCHCCCCCCCCHCHCCCCCCCHHCCCCHCCC0", m);
-	strncpy(mapa[i], "CCCCHHCCCHHCHCCCCCHHCCCHCCCCCCHHCCCCCCCHCCCHCCCCCC", m);*/
-
-	/*strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], "....0.....", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], "....0.....", m);
-	strncpy(mapa[i++], "........P.", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], ".P........", m);
-	strncpy(mapa[i++], "..D3......", m);
-	strncpy(mapa[i++], ".0........", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], "0.........", m);
-	strncpy(mapa[i++], ".......H..", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], "........H.", m);
-	strncpy(mapa[i++], ".......0..", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], "...H...2..", m);
-	strncpy(mapa[i++], "...1......", m);
-	strncpy(mapa[i++], "G.........", m);
-	strncpy(mapa[i++], ".0........", m);
-	strncpy(mapa[i++], "........2.", m);
-	strncpy(mapa[i++], "...H......", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], "2.........", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], "...2......", m);
-	strncpy(mapa[i++], "2.........", m);
-	strncpy(mapa[i++], "...P......", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], "..3.......", m);
-	strncpy(mapa[i++], ".H........", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], "0......H..", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], ".3........", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], "...3......", m);
-	strncpy(mapa[i++], "........1.", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], ".....3....", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], "........3.", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], ".2...1....", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], "....3.....", m);
-	strncpy(mapa[i++], "..3.......", m);
-	strncpy(mapa[i++], ".......2..", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], ".....0....", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], ".H........", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], ".....0....", m);
-	strncpy(mapa[i++], ".....H....", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], "......2...", m);
-	strncpy(mapa[i++], "2.........", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], "1...0.....", m);
-	strncpy(mapa[i++], "...2..3...", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], ".....0....", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i++], ".......0..", m);
-	strncpy(mapa[i++], "..........", m);
-	strncpy(mapa[i], "..........", m);*/
+	strncpy(mapa[i++], "HHHH.HH...H", m);
+	strncpy(mapa[i++], "H.HH.....H.", m);
+	strncpy(mapa[i++], "HPH...HHHH.", m);
+	strncpy(mapa[i++], ".HH.HH.H...", m);
+	strncpy(mapa[i++], "H.H.....HH.", m);
+	strncpy(mapa[i++], "H.H...HHH.H", m);
+	strncpy(mapa[i++], "HHHH.HHH..H", m);
+	strncpy(mapa[i++], "HH.H.PHH..P", m);
+	strncpy(mapa[i++], "HHH.H.H....", m);
+	strncpy(mapa[i++], "..D..H.H...", m);
+	strncpy(mapa[i], ".....H...HH", m);
 
 	/*for (i = 0; i < 0; i++)
 	strncpy(mapa[i], "....................", m);
