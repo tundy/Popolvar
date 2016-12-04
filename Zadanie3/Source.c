@@ -849,18 +849,20 @@ int* zachran_princezne(char** mapa, int height, int width, int t, int* dlzka_ces
 
 	//printf("# result\n");
 	int* result;
+	int offset, end;
+	PathPart* part;
 
 	if (list.parts)
 	{
 		*dlzka_cesty = list.steps + 1;
-		assert((result = malloc(list.steps * 2 * sizeof(int))) != NULL);
+		assert((result = malloc(*dlzka_cesty * 2 * sizeof(int))) != NULL);
 
-		PathPart* part = list.parts;
-		int offset = *dlzka_cesty * 2;
+		part = list.parts;
+		offset = *dlzka_cesty * 2;
 
 		while (part)
 		{
-			int end = part->part->steps * 2;
+			end = part->part->steps * 2;
 			offset -= end;
 
 			if (offset < 0)
@@ -881,7 +883,7 @@ int* zachran_princezne(char** mapa, int height, int width, int t, int* dlzka_ces
 
 	//printf("# free\n");
 
-	Teleport* tTemp;
+	/*Teleport* tTemp;
 	for (i = 0; i < 10; i++)
 	{
 		while (teleporty[i])
@@ -891,9 +893,9 @@ int* zachran_princezne(char** mapa, int height, int width, int t, int* dlzka_ces
 			teleporty[i] = NULL;
 			free(tTemp);
 		}
-	}
+	}*/
 	free(teleporty);
-	teleporty = NULL;
+	//teleporty = NULL;
 
 	free(StartDrak.cesta);
 	free(StartGenerator.cesta);
@@ -924,7 +926,7 @@ int* zachran_princezne(char** mapa, int height, int width, int t, int* dlzka_ces
 	free(P2G.cesta);
 	free(P3G.cesta);
 
-	//printf("# return\n");
+	//printf("# %p\n", result);
 	return result;
 }
 
@@ -961,6 +963,7 @@ void main()
 		strncpy(mapa[i], ".....H...HH", m);
 
 		cesta = zachran_princezne(mapa, n, m, 66, &dlzka_cesty);
+		//printf("# %p\n", cesta);
 		for (i = 0; i < n; i++)
 			free(mapa[i]);
 		free(mapa);
@@ -979,6 +982,7 @@ void main()
 		strncpy(mapa[i], ".PHH..HH...HH.HHH..H.H.HH..H..", m);
 
 		cesta = zachran_princezne(mapa, n, m, 66, &dlzka_cesty);
+		//printf("# %p\n", cesta);
 		for (i = 0; i < n; i++)
 			free(mapa[i]);
 		free(mapa);
