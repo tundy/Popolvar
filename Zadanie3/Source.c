@@ -10,6 +10,9 @@
 #include <stdarg.h>
 #include <limits.h>
 
+#include <assert.h>
+//#define assert(x) if(!(x)) return NULL
+
 #define TRUE 1
 #define FALSE 0
 
@@ -113,12 +116,6 @@ void addEdge(Graph* graph, int width, int srcX, int srcY, char** mapa, int destX
 	Nodes* newNode = newAdjListNode(mapa, destX, destY);
 	newNode->next = graph[src].head;
 	graph[src].head = newNode;
-
-	// Since graph is undirected, add an edge from dest to src also
-	/*int dest = MultiToSingle(width, destX, destY);
-	newNode = newAdjListNode(mapa, destX, destY);
-	newNode->next = graph[dest].head;
-	graph[dest].head = newNode;*/
 }
 
 // Structure to represent a min heap node
@@ -355,13 +352,40 @@ int InitRescue(char** mapa, int height, int width, Teleport** teleporty, Graph* 
 
 	Generator.x = -1;
 
-	P1G.cesta = P2G.cesta = P3G.cesta =
-		DrakPrincenza1GV.cesta = DrakPrincenza2GV.cesta = DrakPrincenza3GV.cesta =
-		DrakPrincenza1GZ.cesta = DrakPrincenza2GZ.cesta = DrakPrincenza3GZ.cesta =
-		GeneratorPrincenza1.cesta = GeneratorPrincenza2.cesta = GeneratorPrincenza3.cesta =
-		P1P2GZ.cesta = P1P3GZ.cesta = P2P1GZ.cesta = P2P3GZ.cesta = P3P1GZ.cesta = P3P2GZ.cesta =
-		P1P2GN.cesta = P1P3GN.cesta = P2P1GN.cesta = P2P3GN.cesta = P3P1GN.cesta = P3P2GN.cesta =
-		DrakGenerator.cesta = StartGenerator.cesta = GeneratorDrak.cesta = StartDrak.cesta = NULL;
+	P1G.cesta = NULL;
+	P2G.cesta = NULL;
+	P3G.cesta = NULL;
+
+	DrakPrincenza1GV.cesta = NULL;
+	DrakPrincenza2GV.cesta = NULL;
+	DrakPrincenza3GV.cesta = NULL;
+
+	DrakPrincenza1GZ.cesta = NULL;
+	DrakPrincenza2GZ.cesta = NULL;
+	DrakPrincenza3GZ.cesta = NULL;
+
+	GeneratorPrincenza1.cesta = NULL;
+	GeneratorPrincenza2.cesta = NULL;
+	GeneratorPrincenza3.cesta = NULL;
+
+	P1P2GZ.cesta = NULL;
+	P1P3GZ.cesta = NULL;
+	P2P1GZ.cesta = NULL;
+	P2P3GZ.cesta = NULL;
+	P3P1GZ.cesta = NULL;
+	P3P2GZ.cesta = NULL;
+
+	P1P2GN.cesta = NULL;
+	P1P3GN.cesta = NULL;
+	P2P1GN.cesta = NULL;
+	P2P3GN.cesta = NULL;
+	P3P1GN.cesta = NULL;
+	P3P2GN.cesta = NULL;
+
+	DrakGenerator.cesta = NULL;
+	StartGenerator.cesta = NULL;
+	GeneratorDrak.cesta = NULL;
+	StartDrak.cesta = NULL;
 
 	for (y = 0; y < height; y++)
 	{
@@ -449,6 +473,7 @@ void addTeleports(Teleport** teleporty, Graph* graph, int width)
 
 int vytvorCestu(Point start, Point ciel, dResult* dResult, int width, Path* pathBack)
 {
+	//printf("# vytvorCestu\n");
 	int index, x, y;
 	int dest = MultiToSingle(width, ciel.x, ciel.y);
 	int src = MultiToSingle(width, start.x, start.y);
@@ -655,6 +680,7 @@ int sdppgp(PathList* list)
 
 int* zachran_princezne(char** mapa, int height, int width, int t, int* dlzka_cesty)
 {
+	//int d = 1;
 	*dlzka_cesty = 0;
 
 	Start.x = 0;
@@ -664,83 +690,117 @@ int* zachran_princezne(char** mapa, int height, int width, int t, int* dlzka_ces
 	dResult* dResult;
 	Teleport** teleporty;
 
-	if ((teleporty = (Teleport**)calloc(10, sizeof(Teleport*))) == NULL) return NULL;
-	if ((graph = createGraph(height, width)) == NULL) return NULL;
-	if (!InitRescue(mapa, height, width, teleporty, graph)) return NULL;
+	//printf("# init\n");
+	assert((teleporty = (Teleport**)calloc(10, sizeof(Teleport*))) != NULL);
+	assert((graph = createGraph(height, width)) != NULL);
+	assert(InitRescue(mapa, height, width, teleporty, graph));
 
-	dResult = dijkstra(graph, height, width, 0, 0);
+	//printf("# dijkstra %d\n", d++);
+	assert((dResult = dijkstra(graph, height, width, 0, 0)) != NULL);
 	int i = MultiToSingle(width, Drak.x, Drak.y);
 	if (dResult->time[i] <= t)
-		vytvorCestu(Start, Drak, dResult, width, &StartDrak);
+	assert(vytvorCestu(Start, Drak, dResult, width, &StartDrak));
 	i = MultiToSingle(width, Generator.x, Generator.y);
 	if (Generator.x != -1 && dResult->time[i] <= t)
-		vytvorCestu(Start, Generator, dResult, width, &StartGenerator);
-
-	dResult = dijkstra(graph, height, width, Drak.x, Drak.y);
-	if (Generator.x != -1)
-		vytvorCestu(Drak, Generator, dResult, width, &DrakGenerator);
-	vytvorCestu(Drak, Princezna1, dResult, width, &DrakPrincenza1GV);
-	vytvorCestu(Drak, Princezna2, dResult, width, &DrakPrincenza2GV);
-	vytvorCestu(Drak, Princezna3, dResult, width, &DrakPrincenza3GV);
+	assert(vytvorCestu(Start, Generator, dResult, width, &StartGenerator));
+	//free(dResult->time);
+	//free(dResult->back);
 	free(dResult);
 
-	dResult = dijkstra(graph, height, width, Princezna1.x, Princezna1.y);
+	//printf("# dijkstra %d\n", d++);
+	assert((dResult = dijkstra(graph, height, width, Drak.x, Drak.y)) != NULL);
 	if (Generator.x != -1)
-		vytvorCestu(Princezna1, Generator, dResult, width, &P1G);
-	vytvorCestu(Princezna1, Princezna2, dResult, width, &P1P2GN);
-	vytvorCestu(Princezna1, Princezna3, dResult, width, &P1P3GN);
+	assert(vytvorCestu(Drak, Generator, dResult, width, &DrakGenerator));
+	assert(vytvorCestu(Drak, Princezna1, dResult, width, &DrakPrincenza1GV));
+	assert(vytvorCestu(Drak, Princezna2, dResult, width, &DrakPrincenza2GV));
+	assert(vytvorCestu(Drak, Princezna3, dResult, width, &DrakPrincenza3GV));
+	//free(dResult->time);
+	//free(dResult->back);
 	free(dResult);
 
-	dResult = dijkstra(graph, height, width, Princezna2.x, Princezna2.y);
+	//printf("# dijkstra %d\n", d++);
+	assert((dResult = dijkstra(graph, height, width, Princezna1.x, Princezna1.y)) != NULL);
 	if (Generator.x != -1)
-		vytvorCestu(Princezna2, Generator, dResult, width, &P2G);
-	vytvorCestu(Princezna2, Princezna1, dResult, width, &P2P1GN);
-	vytvorCestu(Princezna2, Princezna3, dResult, width, &P2P3GN);
+	assert(vytvorCestu(Princezna1, Generator, dResult, width, &P1G));
+	assert(vytvorCestu(Princezna1, Princezna2, dResult, width, &P1P2GN));
+	assert(vytvorCestu(Princezna1, Princezna3, dResult, width, &P1P3GN));
+	//free(dResult->time);
+	//free(dResult->back);
 	free(dResult);
 
-	dResult = dijkstra(graph, height, width, Princezna3.x, Princezna3.y);
+	//printf("# dijkstra %d\n", d++);
+	assert((dResult = dijkstra(graph, height, width, Princezna2.x, Princezna2.y)) != NULL);
 	if (Generator.x != -1)
-		vytvorCestu(Princezna3, Generator, dResult, width, &P3G);
-	vytvorCestu(Princezna3, Princezna1, dResult, width, &P3P1GN);
-	vytvorCestu(Princezna3, Princezna2, dResult, width, &P3P2GN);
+	assert(vytvorCestu(Princezna2, Generator, dResult, width, &P2G));
+	assert(vytvorCestu(Princezna2, Princezna1, dResult, width, &P2P1GN));
+	assert(vytvorCestu(Princezna2, Princezna3, dResult, width, &P2P3GN));
+	//free(dResult->time);
+	//free(dResult->back);
+	free(dResult);
+
+	//printf("# dijkstra %d\n", d++);
+	assert((dResult = dijkstra(graph, height, width, Princezna3.x, Princezna3.y)) != NULL);
+	if (Generator.x != -1)
+	assert(vytvorCestu(Princezna3, Generator, dResult, width, &P3G));
+	assert(vytvorCestu(Princezna3, Princezna1, dResult, width, &P3P1GN));
+	assert(vytvorCestu(Princezna3, Princezna2, dResult, width, &P3P2GN));
+	//free(dResult->time);
+	//free(dResult->back);
 	free(dResult);
 
 	if (Generator.x != -1)
 	{
+		//printf("# teleporty\n");
 		addTeleports(teleporty, graph, width);
 
-		dResult = dijkstra(graph, height, width, Generator.x, Generator.y);
+		//printf("# dijkstra %d\n", d++);
+		assert((dResult = dijkstra(graph, height, width, Generator.x, Generator.y)) != NULL);
 		i = MultiToSingle(width, Generator.x, Generator.y);
 		if (StartGenerator.cesta && (StartGenerator.time + dResult->time[i] <= t))
-			vytvorCestu(Generator, Drak, dResult, width, &GeneratorDrak);
-		vytvorCestu(Generator, Princezna1, dResult, width, &GeneratorPrincenza1);
-		vytvorCestu(Generator, Princezna2, dResult, width, &GeneratorPrincenza2);
-		vytvorCestu(Generator, Princezna3, dResult, width, &GeneratorPrincenza3);
+		assert(vytvorCestu(Generator, Drak, dResult, width, &GeneratorDrak));
+		assert(vytvorCestu(Generator, Princezna1, dResult, width, &GeneratorPrincenza1));
+		assert(vytvorCestu(Generator, Princezna2, dResult, width, &GeneratorPrincenza2));
+		assert(vytvorCestu(Generator, Princezna3, dResult, width, &GeneratorPrincenza3));
+		//free(dResult->time);
+		//free(dResult->back);
 		free(dResult);
 
-		dResult = dijkstra(graph, height, width, Drak.x, Drak.y);
-		vytvorCestu(Drak, Princezna1, dResult, width, &DrakPrincenza1GZ);
-		vytvorCestu(Drak, Princezna2, dResult, width, &DrakPrincenza2GZ);
-		vytvorCestu(Drak, Princezna3, dResult, width, &DrakPrincenza3GZ);
+		//printf("# dijkstra %d\n", d++);
+		assert((dResult = dijkstra(graph, height, width, Drak.x, Drak.y)) != NULL);
+		assert(vytvorCestu(Drak, Princezna1, dResult, width, &DrakPrincenza1GZ));
+		assert(vytvorCestu(Drak, Princezna2, dResult, width, &DrakPrincenza2GZ));
+		assert(vytvorCestu(Drak, Princezna3, dResult, width, &DrakPrincenza3GZ));
+		//free(dResult->time);
+		//free(dResult->back);
 		free(dResult);
 
-		dResult = dijkstra(graph, height, width, Princezna1.x, Princezna1.y);
-		vytvorCestu(Princezna1, Princezna2, dResult, width, &P1P2GZ);
-		vytvorCestu(Princezna1, Princezna3, dResult, width, &P1P3GZ);
+		//printf("# dijkstra %d\n", d++);
+		assert((dResult = dijkstra(graph, height, width, Princezna1.x, Princezna1.y)) != NULL);
+		assert(vytvorCestu(Princezna1, Princezna2, dResult, width, &P1P2GZ));
+		assert(vytvorCestu(Princezna1, Princezna3, dResult, width, &P1P3GZ));
+		//free(dResult->time);
+		//free(dResult->back);
 		free(dResult);
 
-		dResult = dijkstra(graph, height, width, Princezna2.x, Princezna2.y);
-		vytvorCestu(Princezna2, Princezna1, dResult, width, &P2P1GZ);
-		vytvorCestu(Princezna2, Princezna3, dResult, width, &P2P3GZ);
+		//printf("# dijkstra %d\n", d++);
+		assert((dResult = dijkstra(graph, height, width, Princezna2.x, Princezna2.y)) != NULL);
+		assert(vytvorCestu(Princezna2, Princezna1, dResult, width, &P2P1GZ));
+		assert(vytvorCestu(Princezna2, Princezna3, dResult, width, &P2P3GZ));
+		//free(dResult->time);
+		//free(dResult->back);
 		free(dResult);
 
-		dResult = dijkstra(graph, height, width, Princezna3.x, Princezna3.y);
-		vytvorCestu(Princezna3, Princezna1, dResult, width, &P3P1GZ);
-		vytvorCestu(Princezna3, Princezna2, dResult, width, &P3P2GZ);
+		//printf("# dijkstra %d\n", d++);
+		assert((dResult = dijkstra(graph, height, width, Princezna3.x, Princezna3.y)) != NULL);
+		assert(vytvorCestu(Princezna3, Princezna1, dResult, width, &P3P1GZ));
+		assert(vytvorCestu(Princezna3, Princezna2, dResult, width, &P3P2GZ));
+		//free(dResult->time);
+		//free(dResult->back);
 		free(dResult);
 	}
 	//VypisCesty();
 
+	//printf("# fix\n");
 	if (StartGenerator.cesta)
 	{
 		// Existuje cesta Start->Drak->Generator v case t?
@@ -759,39 +819,41 @@ int* zachran_princezne(char** mapa, int height, int width, int t, int* dlzka_ces
 
 
 	PathList list;
-	list.time = INT_MAX ;
+	list.time = INT_MAX;
 	list.parts = NULL;
 
+	//printf("# search\n");
 	// Start->Generator->Drak->Princezna->Princezna->Princezna
 	if (GeneratorDrak.cesta)
-		if (!sgdppp(&list)) return NULL;
+		assert(sgdppp(&list));
 
 	// Start->Drak->...
 	if (StartDrak.cesta)
 	{
 		// Start->Drak->Generator->Princezna->Princezna->Princezna
 		if (DrakGenerator.cesta)
-			if (!sdgppp(&list)) return NULL;
+			assert(sdgppp(&list));
 
 		// Start->Drak->Princezna->Princezna->Princezna
-		if (!sdppp(&list)) return NULL;
+		assert(sdppp(&list));
 
 		if (Generator.x != -1)
 		{
 			// Start->Drak->Princezna->Generator->Princezna->Princezna
-			if (!sdpgpp(&list)) return NULL;
+			assert(sdpgpp(&list));
 
 			// Start->Drak->Princezna->Princezna->Generator->Princezna
-			if (!sdppgp(&list)) return NULL;
+			assert(sdppgp(&list));
 		}
 	}
 
+	//printf("# result\n");
 	int* result;
 
 	if (list.parts)
 	{
 		*dlzka_cesty = list.steps + 1;
-		if ((result = malloc(list.steps * 2 * sizeof(int))) == NULL) return NULL;
+		assert((result = malloc(list.steps * 2 * sizeof(int))) != NULL);
 
 		PathPart* part = list.parts;
 		int offset = *dlzka_cesty * 2;
@@ -817,6 +879,52 @@ int* zachran_princezne(char** mapa, int height, int width, int t, int* dlzka_ces
 		result = NULL;
 	}
 
+	//printf("# free\n");
+
+	Teleport* tTemp;
+	for (i = 0; i < 10; i++)
+	{
+		while (teleporty[i])
+		{
+			tTemp = teleporty[i];
+			teleporty[i] = tTemp->next;
+			teleporty[i] = NULL;
+			free(tTemp);
+		}
+	}
+	free(teleporty);
+	teleporty = NULL;
+
+	free(StartDrak.cesta);
+	free(StartGenerator.cesta);
+	free(GeneratorDrak.cesta);
+	free(DrakGenerator.cesta);
+	free(DrakPrincenza1GV.cesta);
+	free(DrakPrincenza2GV.cesta);
+	free(DrakPrincenza3GV.cesta);
+	free(DrakPrincenza1GZ.cesta);
+	free(DrakPrincenza2GZ.cesta);
+	free(DrakPrincenza3GZ.cesta);
+	free(GeneratorPrincenza1.cesta);
+	free(GeneratorPrincenza2.cesta);
+	free(GeneratorPrincenza3.cesta);
+	free(P1P2GZ.cesta);
+	free(P1P3GZ.cesta);
+	free(P2P1GZ.cesta);
+	free(P2P3GZ.cesta);
+	free(P3P1GZ.cesta);
+	free(P3P2GZ.cesta);
+	free(P1P2GN.cesta);
+	free(P1P3GN.cesta);
+	free(P2P1GN.cesta);
+	free(P2P3GN.cesta);
+	free(P3P1GN.cesta);
+	free(P3P2GN.cesta);
+	free(P1G.cesta);
+	free(P2G.cesta);
+	free(P3G.cesta);
+
+	//printf("# return\n");
 	return result;
 }
 
@@ -825,32 +933,56 @@ int* zachran_princezne(char** mapa, int height, int width, int t, int* dlzka_ces
 
 void main()
 {
-	int n = 11;
-	int m = 11;
-	char** mapa = malloc(n * sizeof(char*));
-	int i;
-	for (i = 0; i < n; i++)
-		mapa[i] = malloc(m * sizeof(char));
+	int dlzka_cesty;
+	int* cesta;
+	int i, n, m;
+	char** mapa;
 
-	i = 0;
-	/*strncpy(mapa[i++], "HHHHHCHCCCHHHCHHHHPDHCCCCHCCCH", m);
-	strncpy(mapa[i++], "CCHCCCCCCHCCCCCHCHHHCCCCCCHCCH", m);
-	strncpy(mapa[i++], "CCCCCHPCCCHHCCHCCCCHCCCCHCCCCH", m);
-	strncpy(mapa[i++], "CCCCHHHHCHCCCHCCCCCHCCHCCCCHCH", m);
-	strncpy(mapa[i], "CPHHCCHHCCCHHCHHHCCHCHCHHCCHCC", m);*/
+	int x;
+	for (x = 0; x < 10; x++)
+	{
+		n = 11;
+		m = 11;
+		mapa = malloc(n * sizeof(char*));
+		for (i = 0; i < n; i++)
+			mapa[i] = malloc(m * sizeof(char));
 
-	strncpy(mapa[i++], "HHHH.HH...H", m);
-	strncpy(mapa[i++], "H.HH.....H.", m);
-	strncpy(mapa[i++], "HPH...HHHH.", m);
-	strncpy(mapa[i++], ".HH.HH.H...", m);
-	strncpy(mapa[i++], "H.H.....HH.", m);
-	strncpy(mapa[i++], "H.H...HHH.H", m);
-	strncpy(mapa[i++], "HHHH.HHH..H", m);
-	strncpy(mapa[i++], "HH.H.PHH..P", m);
-	strncpy(mapa[i++], "HHH.H.H....", m);
-	strncpy(mapa[i++], "..D..H.H...", m);
-	strncpy(mapa[i], ".....H...HH", m);
+		i = 0;
+		strncpy(mapa[i++], "HHHH.HH...H", m);
+		strncpy(mapa[i++], "H.HH.....H.", m);
+		strncpy(mapa[i++], "HPH...HHHH.", m);
+		strncpy(mapa[i++], ".HH.HH.H...", m);
+		strncpy(mapa[i++], "H.H.....HH.", m);
+		strncpy(mapa[i++], "H.H...HHH.H", m);
+		strncpy(mapa[i++], "HHHH.HHH..H", m);
+		strncpy(mapa[i++], "HH.H.PHH..P", m);
+		strncpy(mapa[i++], "HHH.H.H....", m);
+		strncpy(mapa[i++], "..D..H.H...", m);
+		strncpy(mapa[i], ".....H...HH", m);
 
+		cesta = zachran_princezne(mapa, n, m, 66, &dlzka_cesty);
+		for (i = 0; i < n; i++)
+			free(mapa[i]);
+		free(mapa);
+
+		n = 5;
+		m = 30;
+		mapa = malloc(n * sizeof(char*));
+		for (i = 0; i < n; i++)
+			mapa[i] = malloc(m * sizeof(char));
+
+		i = 0;
+		strncpy(mapa[i++], "HHHHH.H...HHH.HHHHPDH....H...H", m);
+		strncpy(mapa[i++], "..H......H.....H.HHH......H..H", m);
+		strncpy(mapa[i++], ".....HP...HH..H....H....H....H", m);
+		strncpy(mapa[i++], "....HHHH.H...H.....H..H....H.H", m);
+		strncpy(mapa[i], ".PHH..HH...HH.HHH..H.H.HH..H..", m);
+
+		cesta = zachran_princezne(mapa, n, m, 66, &dlzka_cesty);
+		for (i = 0; i < n; i++)
+			free(mapa[i]);
+		free(mapa);
+	}
 	/*for (i = 0; i < 0; i++)
 	strncpy(mapa[i], "....................", m);
 
@@ -867,18 +999,18 @@ void main()
 
 	for (; i < n; i++)
 	strncpy(mapa[i], "....................", m);*/
+	/*
+	cesta = zachran_princezne(mapa, n, m, 66, &dlzka_cesty);
 
-	int dlzka_cesty;
-	int* cesta = zachran_princezne(mapa, n, m, 66, &dlzka_cesty);
 
 	printf("Zachranit vsetky princezne dokazem v %d kokoch\n", dlzka_cesty);
 	for (i = 0; i < dlzka_cesty; ++i)
-		printf("%d %d\n", cesta[i * 2], cesta[i * 2 + 1]);
+	printf("%d %d\n", cesta[i * 2], cesta[i * 2 + 1]);
 
 	for (i = 0; i < n; i++)
-		free(mapa[i]);
+	free(mapa[i]);
 	free(mapa);
-
+	*/
 	getchar();
 }
 
